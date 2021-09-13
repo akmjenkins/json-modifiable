@@ -11,7 +11,7 @@ export default {
       sourcemap: true,
       file: 'build/bundle.min.js',
       format: 'iife',
-      name: 'modifiableDescriptor',
+      name: 'jsonModifiable',
       plugins: [bundlesize(), terser()],
     },
   ],

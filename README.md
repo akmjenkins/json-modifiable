@@ -1,4 +1,4 @@
-# Modifiable Descriptor
+# json-modifiable
 
 [![npm version](https://img.shields.io/npm/v/modifiable-descriptor)](https://npmjs.org/package/modifiable-descriptor)
 [![Coverage Status](https://coveralls.io/repos/github/akmjenkins/modifiable-descriptor/badge.svg)](https://coveralls.io/github/akmjenkins/modifiable-descriptor)
@@ -58,7 +58,7 @@ This library internally has tiny implementation of json-patch and json-pointer t
 ```js
 const DynamicFormField = ({ context }) => {
 
-  const refDescriptor = useRef(createModifiableDescriptor(descriptor, rules, { context }))
+  const refDescriptor = useRef(createJSONModifiable(descriptor, rules, { context }))
   const [currentDescriptor, setCurrentDescriptor] = useState(descriptor.current.get());
 
   useEffect(() => {
@@ -114,7 +114,7 @@ import Ajv from 'ajv';
 const ajv = new Ajv();
 const validator = (schema, subject) => ajv.validate(schema, subject);
 
-const modifiable = createModifiableDescriptor(myDescriptor, { validator });
+const modifiable = createJSONModifiable(myDescriptor, rules, { validator });
 ```
 
 ## Rules

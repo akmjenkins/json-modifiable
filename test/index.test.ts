@@ -1,5 +1,5 @@
 import Ajv from 'ajv/dist/2019';
-import createModifiableDescriptor from '../src';
+import createJSONModifiable from '../src';
 
 describe('modifiable', () => {
   const ajv = new Ajv();
@@ -46,7 +46,7 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createModifiableDescriptor(descriptor, rules, { validator });
+    const m = createJSONModifiable(descriptor, rules, { validator });
     const spy = jest.fn();
     m.on('modified', spy);
     m.setContext({ contextPath: '1' });
