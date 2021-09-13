@@ -13,7 +13,7 @@ An incredibly tiny and configurable rules engine for applying arbitrary modifica
 
 ## What in the heck is this good for?
 
-Definining easy to read and easy to apply business logic to things that need to change in response to context. One use case I've used this for is to quickly and easily perform complicated modifications to form field descriptors based on the state of the form (or the current application context).
+Definining easy to read and easy to apply business logic to things that need to behave differently in different contexts. One use case I've used this for is to quickly and easily perform complicated modifications to form field descriptors based on the state of the form (or some other current application context).
 
 ```js
 const descriptor = {
@@ -53,7 +53,7 @@ const rules = [
 ];
 ```
 
-This library internally has tiny implementation of json-patch and json-pointer that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor without throwing errors. And, one of the most important differences with the embedded json-patch utility is that it only patches the parts of the descriptor that are actually modified - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely (or make heavy use of) referential integrity/memoization (like React).
+This library internally has tiny implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors**. And, one of the most important differences with the embedded json-patch utility is that it only patches the parts of the descriptor that are actually modified - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely (or make heavy use of) referential integrity/memoization (like React).
 
 ```js
 const DynamicFormField = ({ context }) => {

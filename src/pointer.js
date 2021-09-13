@@ -23,9 +23,10 @@ const _getPointerObj = (object, pointer) => {
   const compiled = compile(pointer);
   const last = compiled.pop();
   const next = shallowClone(object);
-  const lastObject = compiled.reduce((acc, piece) => {
+  const lastObject = compiled.reduce((acc, piece, i) => {
     if (typeof acc[piece] === 'undefined') {
-      return (acc[piece] = piece < Infinity || piece === '-' ? [] : {});
+      const nextPiece = compiled[i + 1] || last;
+      return (acc[piece] = nextPiece < Infinity || nextPiece === '-' ? [] : {});
     }
     return (acc[piece] = shallowClone(acc[piece]));
   }, next);

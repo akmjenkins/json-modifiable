@@ -21,14 +21,37 @@ const doc = {
   },
 };
 
+type Doc = typeof doc;
+
 describe('patch', () => {
   it('should add', () => {
-    const newDoc = patch<typeof doc & { m: number }>(doc, [
+    type Patch = { m: number };
+    const newDoc = patch<Doc & Patch>(doc, [
       { op: 'add', path: '/m', value: 2 },
     ]);
     expect(newDoc.m).toBe(2);
     // immutable
     expect(newDoc).not.toBe(doc);
+  });
+
+  it('should add nested (array)', () => {
+    type Patch = { m?: { l: number } };
+    type PatchedI = { i: Doc['h']['i'] & Patch };
+    type PatchedH = { h: Doc['h'] & PatchedI };
+    const newDoc = patch<Doc & PatchedH>(doc, [
+      { op: 'add', path: '/h/i/m/l/-', value: 2 },
+    ]);
+    expect(newDoc.h.i.m?.l).toEqual([2]);
+  });
+
+  it('should add nested (object)', () => {
+    type Patch = { m?: { l: number } };
+    type PatchedI = { i: Doc['h']['i'] & Patch };
+    type PatchedH = { h: Doc['h'] & PatchedI };
+    const newDoc = patch<Doc & PatchedH>(doc, [
+      { op: 'add', path: '/h/i/m/l', value: 2 },
+    ]);
+    expect(newDoc.h.i.m?.l).toBe(2);
   });
 
   it('should append', () => {
