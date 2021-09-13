@@ -19,16 +19,15 @@ const shallowClone = (thing) =>
     ? { ...thing }
     : thing;
 
-const _getPointerObj = (object, pointer, { mutate = false } = {}) => {
+const _getPointerObj = (object, pointer) => {
   const compiled = compile(pointer);
   const last = compiled.pop();
-  const doMutate = (what) => (mutate ? what : shallowClone(what));
-  const next = doMutate(object);
+  const next = shallowClone(object);
   const lastObject = compiled.reduce((acc, piece) => {
     if (typeof acc[piece] === 'undefined') {
       return (acc[piece] = piece < Infinity || piece === '-' ? [] : {});
     }
-    return (acc[piece] = doMutate(acc[piece]));
+    return (acc[piece] = shallowClone(acc[piece]));
   }, next);
 
   return {
@@ -38,8 +37,8 @@ const _getPointerObj = (object, pointer, { mutate = false } = {}) => {
   };
 };
 
-export const set = (object, pointer, value, opts) => {
-  const { last, next, lastObject } = _getPointerObj(object, pointer, opts);
+export const set = (object, pointer, value) => {
+  const { last, next, lastObject } = _getPointerObj(object, pointer);
   // no mutations necessary, return the same reference
   if (lastObject[last] === value) return object;
   last === '-' ? lastObject.push(value) : (lastObject[last] = value);
@@ -49,8 +48,8 @@ export const set = (object, pointer, value, opts) => {
 export const get = (object, pointer) =>
   compile(pointer).reduce((acc = {}, piece) => acc[piece], object);
 
-export const unset = (object, pointer, opts) => {
-  const { last, next, lastObject } = _getPointerObj(object, pointer, opts);
+export const unset = (object, pointer) => {
+  const { last, next, lastObject } = _getPointerObj(object, pointer);
 
   if (last === '-') lastObject.pop();
   if (typeof lastObject[last] === 'undefined') return object;
