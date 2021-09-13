@@ -39,7 +39,7 @@ describe('patch', () => {
 
   it('should copy', () => {
     const newDoc = patch(doc, [{ op: 'copy', from: '/b/0/d', path: '/b/-' }]);
-    expect(newDoc.b.pop()).toBe(newDoc.b[0].d);
+    expect(newDoc.b.pop()).toBe(newDoc.b[0].d); // note, this is the same reference (by design)
   });
 
   it('should move', () => {
@@ -50,5 +50,19 @@ describe('patch', () => {
 
   it('should replace', () => {});
 
-  it('should test', () => {});
+  it('should test', () => {
+    expect(
+      patch(doc, [
+        { op: 'test', path: '/a', value: doc.b },
+        { op: 'add', path: '/h/k/l', value: 90 },
+      ]).h.k.l,
+    ).toBe('m');
+
+    expect(
+      patch(doc, [
+        { op: 'test', path: '/a', value: doc.a },
+        { op: 'add', path: '/h/k/l', value: 90 },
+      ]).h.k.l,
+    ).toBe(90);
+  });
 });

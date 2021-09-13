@@ -6,6 +6,6 @@ module.exports = {
   transformIgnorePatterns: ['node_modules/(?!(node-fetch|fetch-blob)/)'],
   collectCoverageFrom: ['./src/*.js'],
   coverageThreshold: {
-    global: { branches: 60, functions: 80, lines: 80 },
+    global: { branches: 65, functions: 80, lines: 85 },
   },
 };
