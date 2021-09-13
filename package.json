@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "A rules engine that modifies your JSON descriptor using JSON standards",
   "main": "build/index.js",
-  "browser": "build/bundle.min.js",  
-  "types": "build/index.d.ts",  
+  "browser": "build/bundle.min.js",
+  "types": "build/index.d.ts",
   "author": "Adam Jenkins",
   "license": "MIT",
   "repository": {
@@ -53,6 +53,7 @@
     "eslint-plugin-import": "^2.24.2",
     "eslint-plugin-jest": "^24.4.0",
     "eslint-plugin-prettier": "^4.0.0",
+    "fast-json-patch": "^3.1.0",
     "jest": "^27.1.0",
     "prettier": "^2.3.2",
     "rimraf": "^3.0.2",

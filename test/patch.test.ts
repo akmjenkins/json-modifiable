@@ -38,11 +38,14 @@ describe('patch', () => {
   });
 
   it('should copy', () => {
-    const f = patch(doc, [{ op: 'copy', from: '/b/0/d', path: '/b/-' }]);
+    const newDoc = patch(doc, [{ op: 'copy', from: '/b/0/d', path: '/b/-' }]);
+    expect(newDoc.b.pop()).toBe(newDoc.b[0].d);
   });
 
   it('should move', () => {
-    const f = patch(doc, [{ op: 'move', from: '/b/0/d', path: '/b/-' }]);
+    const newDoc = patch(doc, [{ op: 'move', from: '/b/0/d', path: '/b/-' }]);
+    expect(newDoc.b.pop()).toBe(doc.b[0].d); // should be the original
+    expect(newDoc.b[0]).not.toHaveProperty('d'); // moved
   });
 
   it('should replace', () => {});
