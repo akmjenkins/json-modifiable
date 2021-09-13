@@ -20,8 +20,6 @@ export default (
   };
 
   const notify = (next, cacheKey) => {
-    // the rare circumstances where the operations were not cached
-    // and did not result in referential changes to the object
     if (modified === next) return;
     modified = next;
     cache.set(cacheKey, next);
@@ -37,10 +35,7 @@ export default (
               try {
                 return validator(schema, resolver(context, key));
               } catch (err) {
-                emit('error', {
-                  type: 'ValidationError',
-                  err,
-                });
+                emit('error', { type: 'ValidationError', err });
               }
             }),
           )
@@ -51,24 +46,20 @@ export default (
 
     const cacheKey = JSON.stringify(rulesToApply);
     const cached = cache.get(cacheKey);
-    if (cached) {
-      if (modified !== cached) notify(cached);
-    } else {
-      notify(
-        rulesToApply.reduce((acc, ops) => {
-          try {
-            return patch(acc, ops);
-          } catch (err) {
-            emit('error', {
-              type: 'PatchError',
-              err,
-            });
-            return acc;
-          }
-        }, descriptor),
-        cacheKey,
-      );
-    }
+
+    notify(
+      cached
+        ? cached
+        : rulesToApply.reduce((acc, ops) => {
+            try {
+              return patch(acc, ops);
+            } catch (err) {
+              emit('error', { type: 'PatchError', err });
+              return acc;
+            }
+          }, descriptor),
+      cacheKey,
+    );
   };
 
   // run immediately
