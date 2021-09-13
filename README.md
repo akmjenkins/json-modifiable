@@ -1,9 +1,9 @@
 # json-modifiable
 
-[![npm version](https://img.shields.io/npm/v/modifiable-descriptor)](https://npmjs.org/package/modifiable-descriptor)
-[![Coverage Status](https://coveralls.io/repos/github/akmjenkins/modifiable-descriptor/badge.svg)](https://coveralls.io/github/akmjenkins/modifiable-descriptor)
-![Build Status](https://github.com/akmjenkins/modifiable-descriptor/actions/workflows/test.yaml/badge.svg)
-[![Bundle Phobia](https://badgen.net/bundlephobia/minzip/modifiable-descriptor)](https://bundlephobia.com/result?p=modifiable-descriptor)
+[![npm version](https://img.shields.io/npm/v/json-modifiable)](https://npmjs.org/package/json-modifiable)
+[![Coverage Status](https://coveralls.io/repos/github/akmjenkins/json-modifiable/badge.svg)](https://coveralls.io/github/akmjenkins/json-modifiable)
+![Build Status](https://github.com/akmjenkins/json-modifiable/actions/workflows/test.yaml/badge.svg)
+[![Bundle Phobia](https://badgen.net/bundlephobia/minzip/json-modifiable)](https://bundlephobia.com/result?p=json-modifiable)
 
 A very tiny and configurable rules engine for applying arbitrary modifications to a descriptor based on context. Designed to work best with JSON standards ([json pointer](https://datatracker.ietf.org/doc/html/rfc6901), [json patch](http://jsonpatch.com/), and [json schema](https://json-schema.org/)) but can work with
 
