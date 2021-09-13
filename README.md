@@ -123,7 +123,43 @@ Rules look like `when`, `then`, `otherwise` where only one of the `then` or `oth
 
 THe `then` and `otherwise` must be arrays of (using the default settings) JSON patch operations. The entire array of operations in a `then` or `otherwise` will be passed to your `patch` function (if you supply one) and the document they apply to.
 
-It's important to know that rules are not independent and run in the order they have been defined. So your patch operations will be operating on the last modified descriptor.
+It's important to know that rules run in the order they have been defined. So your patch operations will be operating on the last modified descriptor.
+
+## API
+
+```ts
+createJSONModifiable<T,C = unknown>(descriptor: T, rules: Rule[], options: Options<C>): JSONModifiable<T,C>
+
+type Rule = {
+  when: Condition[];
+  then?: Operation[];
+  otherwise?: Operation[];
+};
+
+type Condition = {
+  [key: string]: Record<string, unknown>;
+};
+
+// TO DO
+type Operation = unknown
+
+type Options<C> = {
+  // a validator is required
+  validator: (schema: any, subject: any) => boolean;
+  pattern?: RegExp;
+  resolver?: (object: Record<string, unknown>, path: string) => any;
+  patch?: (operations: Operations, record: T) => T;
+}
+
+interface JSONModifiable<T,C = unknown> {
+  get: () => T;
+  set: (descriptor: T) => void;
+  setRules: (rules: Rule<T>[]) => void;
+  setContext: (context: C) => void;
+  subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
+}
+
+```
 
 ## Interpolation
 

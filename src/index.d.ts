@@ -3,7 +3,7 @@ type Subscriber<T> = (arg: T) => void;
 
 type ErrorEvent = any;
 
-interface ModifiableDescriptor<T, C> {
+interface JSONModifiable<T, C> {
   get: () => T;
   set: (descriptor: T) => void;
   setRules: (rules: Rule<T>[]) => void;
@@ -32,8 +32,8 @@ type Options<T> = {
   patch?: (operations: Operations, record: T) => T;
 };
 
-export default function createModifiableDescriptor<T, C = unknown>(
+export default function createJSONModifiable<T, C = unknown>(
   descriptor: T,
   rules: Rule[],
   options: Options<T>,
-): ModifiableDescriptor<T, C>;
+): JSONModifiableDescriptor<T, C>;
