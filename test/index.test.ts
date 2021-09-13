@@ -65,7 +65,8 @@ describe('modifiable', () => {
     expect(modified.validations).not.toBe(descriptor.validations);
 
     // no updates
+    spy.mockClear();
     m.setContext({ contextPath: '1' });
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).not.toHaveBeenCalled();
   });
 });
