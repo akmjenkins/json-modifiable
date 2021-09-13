@@ -10,6 +10,8 @@ export default (
 ) => {
   const { pattern, validator, resolver, patch } = { ...defaults, ...opts };
 
+  if (!validator) throw new Error(`A validator is required`);
+
   modified = descriptor;
   const cache = new Map();
   const emit = (eventType, thing) => {
@@ -35,7 +37,10 @@ export default (
               try {
                 return validator(schema, resolver(context, key));
               } catch (err) {
-                emit('error', err);
+                emit('error', {
+                  type: 'ValidationError',
+                  err,
+                });
               }
             }),
           )
@@ -54,7 +59,10 @@ export default (
           try {
             return patch(acc, ops);
           } catch (err) {
-            emit('error', err);
+            emit('error', {
+              type: 'PatchError',
+              err,
+            });
             return acc;
           }
         }, descriptor),

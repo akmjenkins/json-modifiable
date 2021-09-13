@@ -104,9 +104,13 @@ const formRules = [
 
 ## Validator
 
-A validator is the only dependency that must be user supplied to
+```ts
+type Validator = (schema: any, subject: any) => boolean;
+```
 
-Here's a great one:
+A validator is the only dependency that must be user supplied. It accepts a schema and an subject to evaluate and it synchronously returns a boolean.
+
+Here's a great one, and the one used in all our tests:
 
 ```js
 import Ajv from 'ajv';
@@ -117,53 +121,155 @@ const validator = (schema, subject) => ajv.validate(schema, subject);
 const modifiable = createJSONModifiable(myDescriptor, rules, { validator });
 ```
 
+You can see that by supplying a different validator, you don't even have to use JSON schema (though we recommend it) in your modifiable rules.
+
 ## Rules
 
-Rules look like `when`, `then`, `otherwise` where only one of the `then` or `otherwise` needs to be defined. A when is made up on an array of objects whose keys are pointers to entities in `context` and whose values are schemas that will be passed to the `validator` function
+```ts
+type Rule = {
+  when: Condition[];
+  then?: Operation[];
+  otherwise: Operation[];
+};
+```
 
-THe `then` and `otherwise` must be arrays of (using the default settings) JSON patch operations. The entire array of operations in a `then` or `otherwise` will be passed to your `patch` function (if you supply one) and the document they apply to.
+A rule looks like `when`, `then`, `otherwise` where only one of the `then` or `otherwise` needs to be defined. A when is made up on an array of objects whose keys are pointers to entities in `context` and whose values are schemas that will be passed to the `validator` function.
+
+The `when` is always an array of `Condition`s. `Condition`s are plain objects whose keys are `path`s and values are `schemas`.
+
+```ts
+type Condition = {
+  [key: string]: Record<string, any>;
+};
+
+// e.g.
+const condition = {
+  '/formData/firstName': {
+    type: 'string',
+    minLength: 2,
+  },
+};
+```
+
+If **any** of the `Condition`s in a `Rule` are true, then the operations in the `then` clause are applied. If none of them are true then the operations in the `otherwise` clause are applied. If a rule is false but no `otherwise` clause is specified, then no patches will be applied. The same goes for if a rule is true but doesn't have a `then` clause.
+
+## Operations
+
+THe `then` and `otherwise` must be arrays or `Operation`s. The default implementation requires them to be [JSON patch](http://jsonpatch.com/) operations. The array of operations in a `then` or `otherwise` will be passed to the `patch` function and the document to apply them to.
+
+```ts
+type PatchFunction = <T>(descriptor: T, operations: Operation[]) => T;
+```
 
 It's important to know that rules run in the order they have been defined. So your patch operations will be operating on the last modified descriptor.
 
 ## API
 
 ```ts
-createJSONModifiable<T,C = unknown>(descriptor: T, rules: Rule[], options: Options<C>): JSONModifiable<T,C>
+createJSONModifiable<T,C = unknown,Op = JSONPatchOperation>(
+  descriptor: T,
+  rules: Rule<Op>[],
+  options: Options<T,C,Op>
+): JSONModifiable<T,C>
 
-type Rule = {
+type Rule<Op> = {
   when: Condition[];
-  then?: Operation[];
-  otherwise?: Operation[];
+  then?: Op[];
+  otherwise?: Op[];
 };
 
 type Condition = {
   [key: string]: Record<string, unknown>;
 };
 
-// TO DO
-type Operation = unknown
 
-type Options<C> = {
+type Validator = (schema: any, subject: any) => boolean;
+type Resolver = (object: Record<string, unknown>, path: string) => any;
+
+type Options<T, C, Op> = {
   // a validator is required
-  validator: (schema: any, subject: any) => boolean;
+  validator: Validator;
+  context?: C;
   pattern?: RegExp;
-  resolver?: (object: Record<string, unknown>, path: string) => any;
-  patch?: (operations: Operations, record: T) => T;
-}
+  resolver?: Resolver;
+  patch?: (operations: Op[], record: T) => T;
+};
 
-interface JSONModifiable<T,C = unknown> {
+type Unsubscribe = () => void;
+type Subscriber<T> = (arg: T) => void;
+
+interface JSONModifiable<T, C, Op> {
   get: () => T;
   set: (descriptor: T) => void;
-  setRules: (rules: Rule<T>[]) => void;
+  setRules: (rules: Rule<Op>[]) => void;
   setContext: (context: C) => void;
   subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
+  on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
+  on: (event: 'error', subscriber: Subscriber<ErrorEvent>) => Unsubscribe;
 }
 
 ```
 
 ## Interpolation
 
-TO DO
+You can interpolate values from context into your rules and patches using the `pattern` regexp. By default it uses [handlebars](https://handlebarsjs.com/)-style - e.g. `{{thingToInerpolate}}`
+
+Note the `resolver` accepts, by default, a [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) is used for to evaluate what's being interpolated. So, by default, all interpolation patterns will look like this: `{{/path/to/thing/in/context}}`
+
+Also useful to know is that you can interpolate more than strings, you can interpolate objects or even arrays.
+
+Given the rule and the following context:
+
+```js
+const rule = {
+  when: [
+    {
+      type: 'object',
+      properties: '{{/fields/from/context}}',
+      required: '{{/fields/required}}',
+    },
+  ];
+}
+
+const context = {
+  fields: {
+    from: {
+      context: {
+        a: {
+          type: "strng"
+        },
+        b: {
+          type: "number"
+        }
+      }
+    }
+  },
+  required: ["a"]
+}
+```
+
+You'll end up with the following interpolated rule:
+
+```js
+{
+  when: [
+    {
+      type: 'object',
+      properties: {
+        a: {
+          type: "strng"
+        },
+        b: {
+          type: "number"
+        }
+      }
+      required: ["a"]
+    },
+  ];
+}
+```
+
+Interpolations are very powerful and keep your rules serializable.
 
 ## License
 

@@ -1,12 +1,20 @@
+import { JSONPatchOperation } from './patch';
+
 type Unsubscribe = () => void;
 type Subscriber<T> = (arg: T) => void;
 
-type ErrorEvent = any;
+type Validator = (schema: any, subject: any) => boolean;
+type Resolver = (object: Record<string, unknown>, path: string) => any;
 
-interface JSONModifiable<T, C> {
+type ErrorEvent = {
+  type: 'ValidationError' | 'PatchError';
+  err: Error;
+};
+
+interface JSONModifiable<T, C, Op> {
   get: () => T;
   set: (descriptor: T) => void;
-  setRules: (rules: Rule<T>[]) => void;
+  setRules: (rules: Rule<Op>[]) => void;
   setContext: (context: C) => void;
   subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
   on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
@@ -19,21 +27,26 @@ type Condition = {
 
 type Operation = unknown;
 
-type Rule = {
+type Rule<Op> = {
   when: Condition[];
-  then?: Operation[];
-  otherwise?: Operation[];
+  then?: Op[];
+  otherwise?: Op[];
 };
 
-type Options<T> = {
-  validator: (schema: any, subject: any) => boolean;
+type Options<T, C, Op> = {
+  validator: Validator;
+  context?: C;
   pattern?: RegExp;
-  resolver?: (object: Record<string, unknown>, path: string) => any;
-  patch?: (operations: Operations, record: T) => T;
+  resolver?: Resolver;
+  patch?: (operations: Op[], record: T) => T;
 };
 
-export default function createJSONModifiable<T, C = unknown>(
+export default function createJSONModifiable<
+  T,
+  C = Record<string, unknown>,
+  Op = JSONPatchOperation,
+>(
   descriptor: T,
-  rules: Rule[],
-  options: Options<T>,
-): JSONModifiableDescriptor<T, C>;
+  rules: Rule<Op>[],
+  options: Options<T, C, Op>,
+): JSONModifiable<T, C, Op>;

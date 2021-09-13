@@ -12,7 +12,7 @@ const _patch = (obj, { op, from, path, value }) => {
       return set(obj, path, get(obj, from));
     case 'move':
       if (!from) throw new Error('from is required for move operation');
-      return set(obj, path, unset(obj, from));
+      return set(unset(obj, from), path, get(obj, from));
     case 'test': {
       const resolved = JSON.stringify(get(obj, path));
       if (resolved !== JSON.stringify(value)) {
