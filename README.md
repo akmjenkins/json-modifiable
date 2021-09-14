@@ -11,6 +11,66 @@ An incredibly tiny and configurable rules engine for applying arbitrary modifica
 2. Schema validators like [joi](https://www.npmjs.com/package/joi) or [yup](https://www.npmjs.com/package/yup).
 3. A custom patch function that accepts a document and the instructions provided in your rules, so you can roll your own patch logic.
 
+## Installation
+
+```bash
+npm install json-modifiable
+## or
+yarn add json-modifiable
+```
+
+Or directly via the browser:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/json-modifiable"></script>
+<script>
+  const descriptor = createJSONModifiable(...);
+</script>
+```
+
+## Usage
+
+```js
+import createJSONModifiable from 'json-modifiable';
+
+const descriptor = createJSONModifiable(
+  {
+    fieldId: 'lastName',
+    path: 'user.lastName',
+    label: 'Last Name',
+    readOnly: false,
+    placeholder: 'Enter Your First Name',
+    type: 'text',
+    hidden: true,
+    validations: [['minLength', 2]],
+  },
+  [
+    {
+      when: [
+        {
+          '/formData/firstName': {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+      then: [
+        {
+          op: 'add',
+          path: '/validations/-',
+          value: 'required',
+        },
+      ],
+    },
+  ],
+  { validator },
+);
+
+descriptor.get().validations.find((v) => v === 'required'); // not found
+descriptor.setContext({ formData: { firstName: 'fred' } });
+descriptor.get().validations.find((v) => v === 'required'); // found!
+```
+
 ## What in the heck is this good for?
 
 Definining easy to read and easy to apply business logic to things that need to behave differently in different contexts. One use case I've used this for is to quickly and easily perform complicated modifications to form field descriptors based on the state of the form (or some other current application context).
@@ -53,7 +113,7 @@ const rules = [
 ];
 ```
 
-This library internally has tiny implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors**. And, one of the most important differences with the embedded json-patch utility is that it only patches the parts of the descriptor that are actually modified - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely (or make heavy use of) referential integrity/memoization (like React).
+This library internally has tiny implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors**. And the patch operations are a bit looser than the spec - `add` and `replace` are treated as synonyms and prescribed errors aren't thrown. Another very important difference with the embedded json-patch utility is that it **only patches the parts of the descriptor that are actually modified** - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely (or make heavy use of) referential integrity/memoization (like React).
 
 ```js
 const DynamicFormField = ({ context }) => {
