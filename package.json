@@ -1,7 +1,7 @@
 {
   "name": "json-modifiable",
   "version": "0.1.0",
-  "description": "A rules engine that modifies your JSON descriptor using JSON standards",
+  "description": "A rules engine that dynamically modifies your objects using JSON standards",
   "main": "build/index.js",
   "browser": "build/bundle.min.js",
   "types": "build/index.d.ts",
@@ -9,10 +9,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/akmjenkins/modifiable-descriptor"
+    "url": "https://github.com/akmjenkins/json-modifiable"
   },
   "bugs": {
-    "url": "https://github.com/akmjenkins/modifiable-descriptor/issues"
+    "url": "https://github.com/akmjenkins/json-modifiable/issues"
   },
   "keywords": [
     "json",
