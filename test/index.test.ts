@@ -7,16 +7,26 @@ describe('modifiable', () => {
     ajv.validate(schema, subject);
 
   it('should work', () => {
-    const descriptor = {
+    type Descriptor = {
+      fieldId: string;
+      path: string;
+      label: string;
+      readOnly: boolean;
+      type: string;
+      inner: Record<string, unknown>;
+      hidden: boolean;
+      validations: any[];
+      someNewKey?: string;
+      placeholder?: string;
+    };
+
+    const descriptor: Descriptor = {
       fieldId: 'firstName',
       path: 'user.firstName',
       label: 'First Name',
       readOnly: false,
-      placeholder: 'Enter Your First Name',
       type: 'text',
-      inner: {
-        test: '1',
-      },
+      inner: { test: '1' },
       hidden: false,
       validations: ['required', ['minLength', 2]],
     };
@@ -27,12 +37,11 @@ describe('modifiable', () => {
           {
             '/contextPath': {
               type: 'string',
-              const: '1', // allow interpolation from context?
+              const: '1',
             },
           },
         ],
         then: [
-          // interpolations
           {
             op: 'remove',
             path: '/validations/0',
@@ -43,18 +52,50 @@ describe('modifiable', () => {
             value: { newThing: 'fred' },
           },
         ],
+        otherwise: [
+          {
+            op: 'remove',
+            path: '/validations',
+          },
+        ],
+      },
+      {
+        when: [
+          {
+            '/formData/firstName': {
+              type: 'string',
+              pattern: '^A',
+            },
+          },
+        ],
+        then: [
+          {
+            op: 'add',
+            path: '/placeholder',
+            value:
+              'Hey {{/formData/firstName}}! My first name starts with A, too!',
+          },
+        ],
+        otherwise: [
+          {
+            op: 'add',
+            path: '/placeholder',
+            value: 'Enter your first name',
+          },
+        ],
       },
     ];
 
     const m = createJSONModifiable(descriptor, rules, { validator });
     const spy = jest.fn();
-    m.on('modified', spy);
+    const unsub = m.subscribe(spy);
     m.setContext({ contextPath: '1' });
 
     // 1 notification with the modified descriptor
     expect(spy).toHaveBeenCalledTimes(1);
     const modified = m.get();
     expect(spy).toHaveBeenCalledWith(modified);
+    expect(modified.placeholder).toBe('Enter your first name');
 
     // modified !== descriptor
     expect(modified).not.toBe(descriptor);
@@ -68,5 +109,18 @@ describe('modifiable', () => {
     spy.mockClear();
     m.setContext({ contextPath: '1' });
     expect(spy).not.toHaveBeenCalled();
+    m.setContext({ contextPath: '1', formData: { firstName: 'bill' } });
+    expect(spy).not.toHaveBeenCalled();
+    m.setContext({ formData: { firstName: 'bill' } });
+    expect(m.get().validations).toBeUndefined();
+    m.setContext({ formData: { firstName: 'Andrew' } });
+    expect(m.get().placeholder).toBe(
+      'Hey Andrew! My first name starts with A, too!',
+    );
+
+    unsub();
+    spy.mockClear();
+    m.setContext({ contextPath: '1' });
+    expect(spy).not.toHaveBeenCalled(); // un subbed
   });
 });

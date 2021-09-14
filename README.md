@@ -7,7 +7,7 @@
 
 An incredibly tiny and configurable rules engine for applying arbitrary modifications to a descriptor based on context. Designed to work best with JSON standards ([json pointer](https://datatracker.ietf.org/doc/html/rfc6901), [json patch](http://jsonpatch.com/), and [json schema](https://json-schema.org/)) but can work with
 
-1. [JSON Pointer]() like-syntax - like [property-expr](https://www.npmjs.com/package/property-expr) or [lodash's get](https://lodash.com/docs/4.17.15#get)
+1. [JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) like-syntax - like [property-expr](https://www.npmjs.com/package/property-expr) or [lodash's get](https://lodash.com/docs/4.17.15#get)
 2. Schema validators like [joi](https://www.npmjs.com/package/joi) or [yup](https://www.npmjs.com/package/yup).
 3. A custom patch function that accepts a document and the instructions provided in your rules, so you can roll your own patch logic.
 
@@ -270,6 +270,10 @@ You'll end up with the following interpolated rule:
 ```
 
 Interpolations are very powerful and keep your rules serializable.
+
+## Other Cool Stuff
+
+Check out [json-schema-rules-engine](https://github.com/akmjenkins/json-schema-rules-engine) for a different type of rules engine.
 
 ## License
 
