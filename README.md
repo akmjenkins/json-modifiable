@@ -264,6 +264,7 @@ interface JSONModifiable<T, C, Op> {
   setRules: (rules: Rule<Op>[]) => void;
   setContext: (context: C) => void;
   subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
+  subscribeTo: (path: string, subscriber: Subscriber<T>) => Unsubscribe;
   on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
   on: (event: 'error', subscriber: Subscriber<ErrorEvent>) => Unsubscribe;
 }

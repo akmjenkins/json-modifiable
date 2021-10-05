@@ -6,86 +6,86 @@ describe('modifiable', () => {
   const validator = (schema: any, subject: any) =>
     ajv.validate(schema, subject);
 
+  type Descriptor = {
+    fieldId: string;
+    path: string;
+    label: string;
+    readOnly: boolean;
+    type: string;
+    inner: Record<string, unknown>;
+    hidden: boolean;
+    validations: any[];
+    someNewKey?: string;
+    placeholder?: string;
+  };
+
+  const descriptor: Descriptor = {
+    fieldId: 'firstName',
+    path: 'user.firstName',
+    label: 'First Name',
+    readOnly: false,
+    type: 'text',
+    inner: { test: '1' },
+    hidden: false,
+    validations: ['required', ['minLength', 2]],
+  };
+
+  const rules = [
+    {
+      when: [
+        {
+          '/contextPath': {
+            type: 'string',
+            const: '1',
+          },
+        },
+      ],
+      then: [
+        {
+          op: 'remove',
+          path: '/validations/0',
+        },
+        {
+          op: 'replace',
+          path: '/someNewKey',
+          value: { newThing: 'fred' },
+        },
+      ],
+      otherwise: [
+        {
+          op: 'remove',
+          path: '/validations',
+        },
+      ],
+    },
+    {
+      when: [
+        {
+          '/formData/firstName': {
+            type: 'string',
+            pattern: '^A',
+          },
+        },
+      ],
+      then: [
+        {
+          op: 'add',
+          path: '/placeholder',
+          value:
+            'Hey {{/formData/firstName}}! My first name starts with A, too!',
+        },
+      ],
+      otherwise: [
+        {
+          op: 'add',
+          path: '/placeholder',
+          value: 'Enter your first name',
+        },
+      ],
+    },
+  ];
+
   it('should work', () => {
-    type Descriptor = {
-      fieldId: string;
-      path: string;
-      label: string;
-      readOnly: boolean;
-      type: string;
-      inner: Record<string, unknown>;
-      hidden: boolean;
-      validations: any[];
-      someNewKey?: string;
-      placeholder?: string;
-    };
-
-    const descriptor: Descriptor = {
-      fieldId: 'firstName',
-      path: 'user.firstName',
-      label: 'First Name',
-      readOnly: false,
-      type: 'text',
-      inner: { test: '1' },
-      hidden: false,
-      validations: ['required', ['minLength', 2]],
-    };
-
-    const rules = [
-      {
-        when: [
-          {
-            '/contextPath': {
-              type: 'string',
-              const: '1',
-            },
-          },
-        ],
-        then: [
-          {
-            op: 'remove',
-            path: '/validations/0',
-          },
-          {
-            op: 'replace',
-            path: '/someNewKey',
-            value: { newThing: 'fred' },
-          },
-        ],
-        otherwise: [
-          {
-            op: 'remove',
-            path: '/validations',
-          },
-        ],
-      },
-      {
-        when: [
-          {
-            '/formData/firstName': {
-              type: 'string',
-              pattern: '^A',
-            },
-          },
-        ],
-        then: [
-          {
-            op: 'add',
-            path: '/placeholder',
-            value:
-              'Hey {{/formData/firstName}}! My first name starts with A, too!',
-          },
-        ],
-        otherwise: [
-          {
-            op: 'add',
-            path: '/placeholder',
-            value: 'Enter your first name',
-          },
-        ],
-      },
-    ];
-
     const m = createJSONModifiable(descriptor, rules, { validator });
     const spy = jest.fn();
     const unsub = m.subscribe(spy);
@@ -122,5 +122,18 @@ describe('modifiable', () => {
     spy.mockClear();
     m.setContext({ contextPath: '1' });
     expect(spy).not.toHaveBeenCalled(); // un subbed
+  });
+
+  it('should subscribe to a part', () => {
+    const m = createJSONModifiable(descriptor, rules, { validator });
+    const spy = jest.fn();
+    m.subscribeTo<Descriptor['placeholder']>('/placeholder', spy);
+    m.setContext({ formData: { firstName: 'Alice' } });
+    expect(spy).toHaveBeenCalledWith(m.get().placeholder);
+    spy.mockClear();
+    m.setContext({
+      formData: { firstName: 'Alice', lastName: 'in Wonderland' },
+    });
+    expect(spy).not.toHaveBeenCalled();
   });
 });

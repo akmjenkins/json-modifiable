@@ -1,6 +1,10 @@
 import { interpolate } from './interpolate';
 import defaults from './options';
 
+// get the pointers from the factmaps, get all the dependencies, put them in an object with the pointer as the key and the value as the value?
+// this requires a shallow equal - if we just map the args to an array than we can use isEqual
+// we should also cache the pointers so we don't have to do lookups during each run
+
 export default (
   descriptor,
   rules,
@@ -66,17 +70,21 @@ export default (
   run();
 
   const on = (eventType, subscriber) => {
-    let m = subscribers.get(eventType);
-    m
-      ? m.add(subscriber)
-      : subscribers.set(eventType, (m = new Set([subscriber])));
-
+    subscribers.get(eventType)?.add(subscriber) ||
+      subscribers.set(eventType, new Set([subscriber]));
     return () => subscribers.get(eventType).delete(subscriber);
   };
 
   return {
     on,
     subscribe: (subscriber) => on('modified', subscriber),
+    subscribeTo: (path, subscriber) => {
+      let last = resolver(descriptor, path);
+      return on('modified', (descriptor) => {
+        const next = resolver(descriptor, path);
+        last === next || subscriber((last = next));
+      });
+    },
     get: () => modified,
     set: (d) => descriptor === d || run((descriptor = d), cache.clear()),
     setRules: (r) => rules === r || run((rules = r)),
