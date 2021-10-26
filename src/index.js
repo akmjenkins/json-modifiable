@@ -1,9 +1,24 @@
-import { interpolate } from './interpolate';
+import { memoedInterpolate } from './interpolate';
 import defaults from './options';
 
-// get the pointers from the factmaps, get all the dependencies, put them in an object with the pointer as the key and the value as the value?
-// this requires a shallow equal - if we just map the args to an array than we can use isEqual
-// we should also cache the pointers so we don't have to do lookups during each run
+const shallowArrayEqual = (a, b) =>
+  a === b || (a.length === b.length && a.every((c, i) => c === b[i]));
+
+const memoRules = (rules, resolver, pattern) =>
+  rules.map(({ when, then, otherwise }) => ({
+    when:
+      typeof when === 'function'
+        ? when
+        : memoedInterpolate(when, pattern, resolver),
+    then:
+      then === undefined || typeof then === 'function'
+        ? then
+        : memoedInterpolate(then, pattern, resolver),
+    otherwise:
+      otherwise === undefined || typeof otherwise === 'function'
+        ? otherwise
+        : memoedInterpolate(otherwise, pattern, resolver),
+  }));
 
 export default (
   descriptor,
@@ -16,17 +31,19 @@ export default (
 
   if (!validator) throw new Error(`A validator is required`);
 
+  rules = memoRules(rules, resolver, pattern);
+
+  let lastAppliedRules = [];
+
   modified = descriptor;
-  const cache = new Map();
   const emit = (eventType, thing) => {
     const set = subscribers.get(eventType);
     set && set.forEach((s) => s(thing));
   };
 
-  const notify = (next, cacheKey) => {
+  const notify = (next) => {
     if (modified === next) return;
     modified = next;
-    cache.set(cacheKey, next);
     emit('modified', modified);
   };
 
@@ -34,7 +51,7 @@ export default (
     const rulesToApply = rules
       .map(
         ({ when, then, otherwise }) =>
-          (interpolate(when, context, pattern, resolver).some((rule) =>
+          (when(context).some((rule) =>
             Object.entries(rule).every(([key, schema]) => {
               try {
                 return validator(schema, resolver(context, key));
@@ -46,23 +63,20 @@ export default (
             ? then
             : otherwise) || [],
       )
-      .map((ops) => interpolate(ops, context, pattern, resolver));
+      .map((ops) => ops(context));
 
-    const cacheKey = JSON.stringify(rulesToApply);
-    const cached = cache.get(cacheKey);
+    if (shallowArrayEqual(rulesToApply, lastAppliedRules)) return;
+    lastAppliedRules = rulesToApply;
 
     notify(
-      cached
-        ? cached
-        : rulesToApply.reduce((acc, ops) => {
-            try {
-              return patch(acc, ops);
-            } catch (err) {
-              emit('error', { type: 'PatchError', err });
-              return acc;
-            }
-          }, descriptor),
-      cacheKey,
+      rulesToApply.reduce((acc, ops) => {
+        try {
+          return patch(acc, ops);
+        } catch (err) {
+          emit('error', { type: 'PatchError', err });
+          return acc;
+        }
+      }, descriptor),
     );
   };
 
@@ -86,8 +100,9 @@ export default (
       });
     },
     get: () => modified,
-    set: (d) => descriptor === d || run((descriptor = d), cache.clear()),
-    setRules: (r) => rules === r || run((rules = r)),
+    set: (d) => descriptor === d || run((descriptor = d)),
+    setRules: (r) =>
+      rules === r || run((rules = memoRules(r, resolver, pattern))),
     setContext: (ctx) => context === ctx || run((context = ctx)),
   };
 };
