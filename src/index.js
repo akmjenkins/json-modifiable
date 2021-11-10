@@ -1,9 +1,9 @@
-import { interpolate } from './interpolate';
 import defaults from './options';
+import { compareSets, memoRules } from './utils';
 
 export default (
   descriptor,
-  rules,
+  rules = [],
   { context, ...opts } = {},
   subscribers = new Map(),
   modified,
@@ -12,25 +12,43 @@ export default (
 
   if (!validator) throw new Error(`A validator is required`);
 
+  rules = memoRules(rules, { pattern, resolver });
+
   modified = descriptor;
   const cache = new Map();
+  const cachedRules = new Set();
   const emit = (eventType, thing) => {
     const set = subscribers.get(eventType);
     set && set.forEach((s) => s(thing));
   };
 
-  const notify = (next, cacheKey) => {
+  const evaluate = (ops) =>
+    ops.reduce((acc, ops) => {
+      try {
+        return patch(acc, ops);
+      } catch (err) {
+        emit('error', { type: 'PatchError', err });
+        return acc;
+      }
+    }, descriptor);
+
+  const getCached = (ops) => {
+    for (const [key, value] of cache) if (compareSets(key, ops)) return value;
+  };
+
+  const notify = (next, key) => {
     if (modified === next) return;
+    cache.set(key, next);
     modified = next;
-    cache.set(cacheKey, next);
     emit('modified', modified);
   };
 
   const run = () => {
+    let isCached;
     const rulesToApply = rules
       .map(
         ({ when, then, otherwise }) =>
-          (interpolate(when, context, pattern, resolver).some((rule) =>
+          (when(context).some((rule) =>
             Object.entries(rule).every(([key, schema]) => {
               try {
                 return validator(schema, resolver(context, key));
@@ -42,24 +60,19 @@ export default (
             ? then
             : otherwise) || [],
       )
-      .map((ops) => interpolate(ops, context, pattern, resolver));
+      .map((ops) => {
+        const result = ops(context);
+        if (!cachedRules.has(result)) {
+          isCached = false;
+          cachedRules.add(result);
+        } else {
+          isCached = isCached ?? true;
+        }
+        return result;
+      });
 
-    const cacheKey = JSON.stringify(rulesToApply);
-    const cached = cache.get(cacheKey);
-
-    notify(
-      cached
-        ? cached
-        : rulesToApply.reduce((acc, ops) => {
-            try {
-              return patch(acc, ops);
-            } catch (err) {
-              emit('error', { type: 'PatchError', err });
-              return acc;
-            }
-          }, descriptor),
-      cacheKey,
-    );
+    const ops = new Set(rulesToApply);
+    notify(getCached(ops) || evaluate(rulesToApply), ops);
   };
 
   // run immediately
@@ -79,7 +92,7 @@ export default (
     subscribe: (subscriber) => on('modified', subscriber),
     get: () => modified,
     set: (d) => descriptor === d || run((descriptor = d), cache.clear()),
-    setRules: (r) => rules === r || run((rules = r)),
+    setRules: (r) => run((rules = memoRules(rules, { pattern, resolver }))),
     setContext: (ctx) => context === ctx || run((context = ctx)),
   };
 };

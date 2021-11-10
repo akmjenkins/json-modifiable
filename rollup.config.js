@@ -3,6 +3,7 @@ import { terser } from 'rollup-plugin-terser';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import bundlesize from 'rollup-plugin-bundle-size';
 import { babel } from '@rollup/plugin-babel';
+import commonjs from '@rollup/plugin-commonjs';
 
 export default {
   input: 'src/index.js',
@@ -15,5 +16,10 @@ export default {
       plugins: [bundlesize(), terser()],
     },
   ],
-  plugins: [nodeResolve(), babel({ babelHelpers: 'bundled' }), sourcemaps()],
+  plugins: [
+    commonjs(),
+    nodeResolve(),
+    babel({ babelHelpers: 'bundled' }),
+    sourcemaps(),
+  ],
 };
