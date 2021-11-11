@@ -1,5 +1,6 @@
 import defaults from './options';
-import { compareSets, memoRules } from './utils';
+import { createStatefulRules } from './rule';
+import { compareSets } from './utils';
 
 export default (
   descriptor,
@@ -8,15 +9,14 @@ export default (
   subscribers = new Map(),
   modified,
 ) => {
-  const { pattern, validator, resolver, patch } = { ...defaults, ...opts };
+  opts = { ...defaults, ...opts };
 
-  if (!validator) throw new Error(`A validator is required`);
+  if (!opts.validator) throw new Error(`A validator is required`);
 
-  rules = memoRules(rules, { pattern, resolver });
+  rules = createStatefulRules(rules, opts);
 
   modified = descriptor;
   const cache = new Map();
-  const cachedRules = new Set();
   const emit = (eventType, thing) => {
     const set = subscribers.get(eventType);
     set && set.forEach((s) => s(thing));
@@ -25,7 +25,7 @@ export default (
   const evaluate = (ops) =>
     ops.reduce((acc, ops) => {
       try {
-        return patch(acc, ops);
+        return opts.patch(acc, ops);
       } catch (err) {
         emit('error', { type: 'PatchError', err });
         return acc;
@@ -44,33 +44,7 @@ export default (
   };
 
   const run = () => {
-    let isCached;
-    const rulesToApply = rules
-      .map(
-        ({ when, then, otherwise }) =>
-          (when(context).some((rule) =>
-            Object.entries(rule).every(([key, schema]) => {
-              try {
-                return validator(schema, resolver(context, key));
-              } catch (err) {
-                emit('error', { type: 'ValidationError', err });
-              }
-            }),
-          )
-            ? then
-            : otherwise) || [],
-      )
-      .map((ops) => {
-        const result = ops(context);
-        if (!cachedRules.has(result)) {
-          isCached = false;
-          cachedRules.add(result);
-        } else {
-          isCached = isCached ?? true;
-        }
-        return result;
-      });
-
+    const rulesToApply = rules(context, opts);
     const ops = new Set(rulesToApply);
     notify(getCached(ops) || evaluate(rulesToApply), ops);
   };
@@ -92,7 +66,7 @@ export default (
     subscribe: (subscriber) => on('modified', subscriber),
     get: () => modified,
     set: (d) => descriptor === d || run((descriptor = d), cache.clear()),
-    setRules: (r) => run((rules = memoRules(rules, { pattern, resolver }))),
-    setContext: (ctx) => context === ctx || run((context = ctx)),
+    setRules: (r) => run((rules = createStatefulRules(rules, opts))),
+    setContext: (ctx) => run((context = ctx)),
   };
 };

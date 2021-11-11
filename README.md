@@ -168,7 +168,7 @@ const formRules = [
 type Validator = (schema: any, subject: any) => boolean;
 ```
 
-A validator is the only dependency that must be user supplied. It accepts a schema and an subject to evaluate and it synchronously returns a boolean.
+A validator is the only dependency that must be user supplied. It accepts a schema and an subject to evaluate and it synchronously returns a boolean. Because of the extensive performance optimizations going on inside the engine to keep it blazing fast **it's important to note the validator MUST BE A PURE FUNCTION**
 
 Here's a great one, and the one used in all our tests:
 
@@ -250,7 +250,7 @@ type Options<T, C, Op> = {
   // a validator is required
   validator: Validator;
   context?: C;
-  pattern?: RegExp;
+  pattern?: RegExp | null;
   resolver?: Resolver;
   patch?: (operations: Op[], record: T) => T;
 };
@@ -330,6 +330,25 @@ You'll end up with the following interpolated rule:
 ```
 
 Interpolations are very powerful and keep your rules serializable.
+
+### About interpolation performance
+
+**TLDR** in performance critical environments where you aren't using interpolation, pass `null` for the `pattern` option:
+
+```js
+const modifiable = createJSONModifiable(
+  myDescriptor, 
+  rules, 
+  { 
+    validator,
+    pattern: null
+  }
+);
+```
+
+
+
+This package uses [interpolatable](https://github.com/akmjenkins/interpolatable) to perform blazing fast interpolations on deeply nested data structures. Interpolatable ensures the expensive operation of traversing nested objects/arrays only happens when absolutely necessary. However, if you don't use interpolation in your rules, your objects will still be traversed the first time your rules are loaded into the engine. If you are operating in a performance critical environment and/or your rules are very large, you can simply pass `null` for the pattern option to skip this initial traversal as well. In the future, it's possible that the interpolation pattern can be defined per rule for even finer-grained control.
 
 ## Other Cool Stuff
 

@@ -36,7 +36,7 @@ type Rule<Op> = {
 type Options<T, C, Op> = {
   validator: Validator;
   context?: C;
-  pattern?: RegExp;
+  pattern?: RegExp | null;
   resolver?: Resolver;
   patch?: (operations: Op[], record: T) => T;
 };
