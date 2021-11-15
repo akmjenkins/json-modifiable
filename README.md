@@ -120,6 +120,7 @@ const DynamicFormField = ({ context }) => {
 
   const refDescriptor = useRef(createJSONModifiable(descriptor, rules, { context }))
   const [currentDescriptor, setCurrentDescriptor] = useState(descriptor.current.get());
+  const [context,setContext] = useState({})  
 
   useEffect(() => {
     return refDescriptor.current.subscribe(setCurrentDescriptor)
@@ -186,10 +187,10 @@ You can see that by supplying a different validator, you don't even have to use 
 ## Rules
 
 ```ts
-type Rule = {
+type Rule<Patch = unknown> = {
   when: Condition[];
-  then?: Operation[];
-  otherwise: Operation[];
+  then?: Patch;
+  otherwise: Patch;
 };
 ```
 
@@ -202,7 +203,7 @@ type Condition = {
   [key: string]: Record<string, any>;
 };
 
-// e.g.
+// e.g. Condition using json-pointer syntax
 const condition = {
   '/formData/firstName': {
     type: 'string',
@@ -211,31 +212,31 @@ const condition = {
 };
 ```
 
-If **any** of the `Condition`s in a `Rule` are true, then the operations in the `then` clause are applied. If none of them are true then the operations in the `otherwise` clause are applied. If a rule is false but no `otherwise` clause is specified, then no patches will be applied. The same goes for if a rule is true but doesn't have a `then` clause.
+If **any** of the `Condition`s in a `Rule` are true, then the operations in the `then` clause are applied. If none of them are true then the patch `otherwise` clause are applied. If a rule is false but no `otherwise` clause is specified, then no patches will be applied. The same goes for if a rule is true but doesn't have a `then` clause.
 
 ## Operations
 
-THe `then` and `otherwise` must be arrays or `Operation`s. The default implementation requires them to be [JSON patch](http://jsonpatch.com/) operations. The array of operations in a `then` or `otherwise` will be passed to the `patch` function and the document to apply them to.
+THe `then` and `otherwise` are patch entites. Using json standards, JSON Modifiable allows them to be be specified as a [JSON patch](http://jsonpatch.com/) - an array of patch operations.
 
 ```ts
 type PatchFunction = <T>(descriptor: T, operations: Operation[]) => T;
 ```
 
-It's important to know that rules run in the order they have been defined. So your patch operations will be operating on the last modified descriptor.
+**Note:** It's important to know that rules run in the order they have been defined. So your patches will be applied in the order they are evaluated.
 
 ## API
 
 ```ts
-createJSONModifiable<T,C = unknown,Op = JSONPatchOperation>(
+createJSONModifiable<T, C = unknown, Patch = unknown>(
   descriptor: T,
-  rules: Rule<Op>[],
-  options: Options<T,C,Op>
+  rules: Rule<Patch>[],
+  options: Options<T,C,Patch>
 ): JSONModifiable<T,C>
 
-type Rule<Op> = {
+type Rule<Patch> = {
   when: Condition[];
-  then?: Op[];
-  otherwise?: Op[];
+  then?: Patch[];
+  otherwise?: Patch[];
 };
 
 type Condition = {
@@ -246,22 +247,20 @@ type Condition = {
 type Validator = (schema: any, subject: any) => boolean;
 type Resolver = (object: Record<string, unknown>, path: string) => any;
 
-type Options<T, C, Op> = {
+type Options<T, C, Patch> = {
   // a validator is required
   validator: Validator;
   context?: C;
   pattern?: RegExp | null;
   resolver?: Resolver;
-  patch?: (operations: Op[], record: T) => T;
+  patch?: (record: T, patch: Patch) => T;
 };
 
 type Unsubscribe = () => void;
 type Subscriber<T> = (arg: T) => void;
 
-interface JSONModifiable<T, C, Op> {
+interface JSONModifiable<T, C, Patch> {
   get: () => T;
-  set: (descriptor: T) => void;
-  setRules: (rules: Rule<Op>[]) => void;
   setContext: (context: C) => void;
   subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
   on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
@@ -272,11 +271,7 @@ interface JSONModifiable<T, C, Op> {
 
 ## Interpolation
 
-You can interpolate values from context into your rules and patches using the `pattern` regexp. By default it uses [handlebars](https://handlebarsjs.com/)-style - e.g. `{{thingToInerpolate}}`
-
-Note the `resolver` accepts, by default, a [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) is used for to evaluate what's being interpolated. So, by default, all interpolation patterns will look like this: `{{/path/to/thing/in/context}}`
-
-Also useful to know is that you can interpolate more than strings, you can interpolate objects or even arrays.
+`json-modifiable` uses [interpolatable](https://github.com/akmjenkins/interpolatable) to offer allow interpolation of values into rules/patches. See the [docs](https://github.com/akmjenkins/interpolatable) for how it works. The resolver function passed to `json-modifiable` will be the same one passed to interpolatable. By default it's just an accessor, but you could also use a resolver that works with [json pointer](https://datatracker.ietf.org/doc/html/rfc6901):
 
 Given the rule and the following context:
 
@@ -345,10 +340,6 @@ const modifiable = createJSONModifiable(
   }
 );
 ```
-
-
-
-This package uses [interpolatable](https://github.com/akmjenkins/interpolatable) to perform blazing fast interpolations on deeply nested data structures. Interpolatable ensures the expensive operation of traversing nested objects/arrays only happens when absolutely necessary. However, if you don't use interpolation in your rules, your objects will still be traversed the first time your rules are loaded into the engine. If you are operating in a performance critical environment and/or your rules are very large, you can simply pass `null` for the pattern option to skip this initial traversal as well. In the future, it's possible that the interpolation pattern can be defined per rule for even finer-grained control.
 
 ## Other Cool Stuff
 

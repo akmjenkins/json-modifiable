@@ -1,17 +1,26 @@
-import defaults from './options';
 import { createStatefulRules } from './rule';
 import { compareSets } from './utils';
+
+const resolver = (context, key) => context[key];
+const patch = (record, patch) => ({ ...record, ...patch });
+
+const defaults = {
+  resolver,
+  patch,
+};
 
 export default (
   descriptor,
   rules = [],
-  { context, ...opts } = {},
+  { context = {}, ...opts } = {},
   subscribers = new Map(),
   modified,
 ) => {
   opts = { ...defaults, ...opts };
 
   if (!opts.validator) throw new Error(`A validator is required`);
+  if (!opts.patch) throw new Error(`A patch function is required`);
+  if (!opts.resolver) throw new Error(`A resolver function is required`);
 
   rules = createStatefulRules(rules, opts);
 
@@ -65,8 +74,6 @@ export default (
     on,
     subscribe: (subscriber) => on('modified', subscriber),
     get: () => modified,
-    set: (d) => descriptor === d || run((descriptor = d), cache.clear()),
-    setRules: (r) => run((rules = createStatefulRules(rules, opts))),
     setContext: (ctx) => run((context = ctx)),
   };
 };

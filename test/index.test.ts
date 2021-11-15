@@ -1,24 +1,65 @@
 import Ajv from 'ajv/dist/2019';
-import createJSONModifiable from '../src/index';
+import { applyPatch, Operation } from 'fast-json-patch';
+import { get } from 'jsonpointer';
+import { getter } from 'property-expr';
+import createJSONModifiable, { Rule } from '../src/index';
+
+const ajv = new Ajv();
+const validator = ajv.validate.bind(ajv);
+
+type Descriptor = {
+  fieldId: string;
+  path: string;
+  label: string;
+  readOnly: boolean;
+  type: string;
+  inner: Record<string, unknown>;
+  hidden: boolean;
+  validations: any[];
+  someNewKey?: string;
+  placeholder?: string;
+};
 
 describe('modifiable', () => {
-  const ajv = new Ajv();
-  const validator = (schema: any, subject: any) =>
-    ajv.validate(schema, subject);
-
-  it('should work', () => {
-    type Descriptor = {
-      fieldId: string;
-      path: string;
-      label: string;
-      readOnly: boolean;
-      type: string;
-      inner: Record<string, unknown>;
-      hidden: boolean;
-      validations: any[];
-      someNewKey?: string;
-      placeholder?: string;
+  it('should work with default settings', () => {
+    const descriptor: Descriptor = {
+      fieldId: 'firstName',
+      path: 'user.firstName',
+      label: 'First Name',
+      readOnly: false,
+      type: 'text',
+      inner: { test: '1' },
+      hidden: false,
+      validations: ['required', ['minLength', 2]],
     };
+
+    const rules: Rule[] = [
+      {
+        when: [{ contextPath: { type: 'string', const: '1' } }],
+        then: { someNewKey: 'fred' },
+      },
+      {
+        when: [{ firstName: { type: 'string', pattern: '^A' } }],
+        then: {
+          placeholder: 'Hey {{firstName}}! My first name starts with A, too!',
+        },
+        otherwise: { placeholder: 'Enter your first name' },
+      },
+    ];
+
+    const m = createJSONModifiable(descriptor, rules, { validator });
+    expect(m.get().someNewKey).toBeUndefined();
+    expect(m.get().placeholder).toBe('Enter your first name');
+    m.setContext({ contextPath: '1' });
+    expect(m.get().someNewKey).toBe('fred');
+    m.setContext({ firstName: 'Andrew' });
+    expect(m.get().placeholder).toBe(
+      'Hey Andrew! My first name starts with A, too!',
+    );
+  });
+
+  it('should work with a custom resolver', () => {
+    const resolver = (object: any, path: string) => getter(path, true)(object);
 
     const descriptor: Descriptor = {
       fieldId: 'firstName',
@@ -31,7 +72,45 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules = [
+    const rules: Rule[] = [
+      {
+        when: [{ contextPath: { type: 'string', const: '1' } }],
+        then: { someNewKey: 'fred' },
+      },
+      {
+        when: [{ 'formData.firstName': { type: 'string', pattern: '^A' } }],
+        then: {
+          placeholder:
+            'Hey {{formData.firstName}}! My first name starts with A, too!',
+        },
+        otherwise: { placeholder: 'Enter your first name' },
+      },
+    ];
+
+    const m = createJSONModifiable(descriptor, rules, { validator, resolver });
+    expect(m.get().someNewKey).toBeUndefined();
+    expect(m.get().placeholder).toBe('Enter your first name');
+    m.setContext({ contextPath: '1' });
+    expect(m.get().someNewKey).toBe('fred');
+    m.setContext({ formData: { firstName: 'Andrew' } });
+    expect(m.get().placeholder).toBe(
+      'Hey Andrew! My first name starts with A, too!',
+    );
+  });
+
+  it('should work with JSON standards', () => {
+    const descriptor: Descriptor = {
+      fieldId: 'firstName',
+      path: 'user.firstName',
+      label: 'First Name',
+      readOnly: false,
+      type: 'text',
+      inner: { test: '1' },
+      hidden: false,
+      validations: ['required', ['minLength', 2]],
+    };
+
+    const rules: Rule<Operation[]>[] = [
       {
         when: [
           {
@@ -86,7 +165,12 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, { validator });
+    const m = createJSONModifiable(descriptor, rules, {
+      validator,
+      resolver: get,
+      patch: (descriptor, ops) =>
+        applyPatch(descriptor, ops, false, false).newDocument,
+    });
     const spy = jest.fn();
     const unsub = m.subscribe(spy);
     m.setContext({ contextPath: '1' });
@@ -99,11 +183,6 @@ describe('modifiable', () => {
 
     // modified !== descriptor
     expect(modified).not.toBe(descriptor);
-    // referential integrity on non-patched parts of the document
-    expect(modified.inner).toBe(descriptor.inner);
-
-    // patched parts should not be referntially identical
-    expect(modified.validations).not.toBe(descriptor.validations);
 
     // no updates
     spy.mockClear();
@@ -149,7 +228,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules = [
+    const rules: Rule<Operation[]>[] = [
       {
         when: [
           {
@@ -206,6 +285,9 @@ describe('modifiable', () => {
     const m = createJSONModifiable(descriptor, rules, {
       validator,
       pattern: null,
+      resolver: get,
+      patch: (descriptor, ops) =>
+        applyPatch(descriptor, ops, false, false).newDocument,
     });
     const spy = jest.fn();
     const unsub = m.subscribe(spy);
@@ -219,11 +301,6 @@ describe('modifiable', () => {
 
     // modified !== descriptor
     expect(modified).not.toBe(descriptor);
-    // referential integrity on non-patched parts of the document
-    expect(modified.inner).toBe(descriptor.inner);
-
-    // patched parts should not be referntially identical
-    expect(modified.validations).not.toBe(descriptor.validations);
 
     // no updates
     spy.mockClear();

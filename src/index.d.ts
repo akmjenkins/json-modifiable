@@ -1,5 +1,3 @@
-import { JSONPatchOperation } from './patch';
-
 type Unsubscribe = () => void;
 type Subscriber<T> = (arg: T) => void;
 
@@ -27,10 +25,10 @@ type Condition = {
 
 type Operation = unknown;
 
-type Rule<Op> = {
+export type Rule<Op = Record<string, unknown>> = {
   when: Condition[];
-  then?: Op[];
-  otherwise?: Op[];
+  then?: Op;
+  otherwise?: Op;
 };
 
 type Options<T, C, Op> = {
@@ -38,13 +36,13 @@ type Options<T, C, Op> = {
   context?: C;
   pattern?: RegExp | null;
   resolver?: Resolver;
-  patch?: (operations: Op[], record: T) => T;
+  patch?: (record: T, operations: Op) => T;
 };
 
 export default function createJSONModifiable<
   T,
   C = Record<string, unknown>,
-  Op = JSONPatchOperation,
+  Op = unknown,
 >(
   descriptor: T,
   rules: Rule<Op>[],
