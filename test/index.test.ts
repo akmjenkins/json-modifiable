@@ -1,24 +1,10 @@
-import Ajv from 'ajv/dist/2019';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { get } from 'jsonpointer';
-import { getter } from 'property-expr';
-import createJSONModifiable, { Rule } from '../src/index';
+import expr from 'property-expr';
+import { Rule, engine as createJSONModifiable } from '../src/index';
+import { Descriptor, validator } from './fixtures';
 
-const ajv = new Ajv();
-const validator = ajv.validate.bind(ajv);
-
-type Descriptor = {
-  fieldId: string;
-  path: string;
-  label: string;
-  readOnly: boolean;
-  type: string;
-  inner: Record<string, unknown>;
-  hidden: boolean;
-  validations: any[];
-  someNewKey?: string;
-  placeholder?: string;
-};
+const { getter } = expr;
 
 describe('modifiable', () => {
   it('should work with default settings', () => {
@@ -33,7 +19,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule[] = [
+    const rules: Rule<Partial<Descriptor>>[] = [
       {
         when: [{ contextPath: { type: 'string', const: '1' } }],
         then: { someNewKey: 'fred' },
@@ -72,7 +58,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule[] = [
+    const rules: Rule<Partial<Descriptor>>[] = [
       {
         when: [{ contextPath: { type: 'string', const: '1' } }],
         then: { someNewKey: 'fred' },
