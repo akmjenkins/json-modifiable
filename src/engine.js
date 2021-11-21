@@ -2,9 +2,7 @@ import { createStatefulRules } from './rule';
 import { compareSets } from './utils';
 
 const resolver = (context, key) => context[key];
-const patch = (record, patch) => ({ ...record, ...patch });
-
-const defaults = { resolver, patch };
+const patch = (...args) => Object.assign({}, ...args);
 
 export const engine = (
   descriptor,
@@ -14,7 +12,7 @@ export const engine = (
   subscribers = new Map(),
   modified,
 ) => {
-  opts = { ...defaults, ...opts };
+  opts = { resolver, patch, ...opts };
 
   if (!validator) throw new Error(`A validator is required`);
   if (!opts.patch) throw new Error(`A patch function is required`);

@@ -12,5 +12,6 @@ export type Descriptor = {
   someNewKey?: string;
   placeholder?: string;
 };
+
 const ajv = new Ajv();
 export const validator = ajv.validate.bind(ajv);
