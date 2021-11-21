@@ -1,7 +1,7 @@
 import { applyPatch, Operation } from 'fast-json-patch';
 import { get } from 'jsonpointer';
 import expr from 'property-expr';
-import { Rule, engine as createJSONModifiable } from '../src/index';
+import { Rule, engine } from '../src/index';
 import { Descriptor, validator } from './fixtures';
 
 const { getter } = expr;
@@ -33,7 +33,7 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, { validator });
+    const m = engine(descriptor, validator, rules);
     expect(m.get().someNewKey).toBeUndefined();
     expect(m.get().placeholder).toBe('Enter your first name');
     m.setContext({ contextPath: '1' });
@@ -73,7 +73,7 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, { validator, resolver });
+    const m = engine(descriptor, validator, rules, { resolver });
     expect(m.get().someNewKey).toBeUndefined();
     expect(m.get().placeholder).toBe('Enter your first name');
     m.setContext({ contextPath: '1' });
@@ -151,8 +151,7 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, {
-      validator,
+    const m = engine(descriptor, validator, rules, {
       resolver: get,
       patch: (descriptor, ops) =>
         applyPatch(descriptor, ops, false, false).newDocument,
@@ -268,8 +267,7 @@ describe('modifiable', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, {
-      validator,
+    const m = engine(descriptor, validator, rules, {
       pattern: null,
       resolver: get,
       patch: (descriptor, ops) =>

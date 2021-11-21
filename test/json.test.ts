@@ -1,4 +1,4 @@
-import { jsonEngine as createJSONModifiable, JSONPatchRule } from '../src';
+import { jsonEngine, JSONPatchRule } from '../src';
 import { Descriptor, validator } from './fixtures';
 
 describe('json pointer/patch', () => {
@@ -69,7 +69,7 @@ describe('json pointer/patch', () => {
       },
     ];
 
-    const m = createJSONModifiable(descriptor, rules, { validator });
+    const m = jsonEngine(descriptor, validator, rules);
     const spy = jest.fn();
     const unsub = m.subscribe(spy);
     m.setContext({ contextPath: '1' });

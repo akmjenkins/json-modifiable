@@ -24,16 +24,19 @@ Or directly via the browser:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/json-modifiable"></script>
 <script>
-  const descriptor = createJSONModifiable(...);
+  const descriptor = jsonModifiable.engine(...)
+  
+  // or see JSON Engine
+  const descriptor = jsonModifiable.jsonEngine(...)
 </script>
 ```
 
 ## Usage
 
 ```js
-import createJSONModifiable from 'json-modifiable';
+import { engine } from 'json-modifiable';
 
-const descriptor = createJSONModifiable(
+const descriptor = engine(
   {
     fieldId: 'lastName',
     path: 'user.lastName',
@@ -42,26 +45,23 @@ const descriptor = createJSONModifiable(
     placeholder: 'Enter Your First Name',
     type: 'text',
     hidden: true,
-    validations: [['minLength', 2]],
+    validations: [],
   },
   [
     {
       when: [
         {
-          '/formData/firstName': {
+          'firstName': {
             type: 'string',
-            minLength: 1,
-          },
+            minLength: 1
+          }
         },
       ],
-      then: [
-        {
-          op: 'add',
-          path: '/validations/-',
-          value: 'required',
-        },
-      ],
+      then: {
+        validations: ['required']
+      }
     },
+    // ... more rules
   ],
   { validator },
 );
@@ -84,7 +84,7 @@ const descriptor = {
   placeholder: 'Enter Your First Name',
   type: 'text',
   hidden: true,
-  validations: [['minLength', 2]],
+  validations: [],
 };
 
 const rules = [
@@ -97,28 +97,33 @@ const rules = [
         },
       },
     ],
-    then: [
-      {
-        op: 'add',
-        path: '/validations/-',
-        value: 'required',
-      },
-      {
-        op: 'replace',
-        path: '/hidden',
-        value: false,
-      },
-    ],
+    then: {
+      validations: ['required'],
+      hidden: false
+    }
   },
 ];
 ```
 
-This library internally has tiny implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors**. And the patch operations are a bit looser than the spec - `add` and `replace` are treated as synonyms and prescribed errors aren't thrown. Another very important difference with the embedded json-patch utility is that it **only patches the parts of the descriptor that are actually modified** - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely (or make heavy use of) referential integrity/memoization (like React).
+### API
+
+
+
+
+### JSON Engine
+
+This library also exports a function `jsonEngine` which is a thin wrapper over the engine using [json patch](http://jsonpatch.com/) as the patch function and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) as the default resolver. You can then write modifiable rules like this:
+
+
+
+This library internally has tiny, largely spec compliant implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors** (not spec compliant). 
+
+The patch operations are a bit looser than the spec - `add` and `replace` are treated as synonyms and prescribed errors aren't thrown. Another very important difference with the embedded json-patch utility is that it **only patches the parts of the descriptor that are actually modified** - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely on (or make heavy use of) referential integrity/memoization (like React).
 
 ```js
 const DynamicFormField = ({ context }) => {
 
-  const refDescriptor = useRef(createJSONModifiable(descriptor, rules, { context }))
+  const refDescriptor = useRef(engine(descriptor, rules, { context }))
   const [currentDescriptor, setCurrentDescriptor] = useState(descriptor.current.get());
   const [context,setContext] = useState({})  
 
@@ -130,7 +135,7 @@ const DynamicFormField = ({ context }) => {
     refDescriptor.current.setContext(context);
   },[context])
 
-  return (/* some JSX*/)
+  return (/* some JSX */)
 }
 ```
 
@@ -174,12 +179,13 @@ A validator is the only dependency that must be user supplied. It accepts a sche
 Here's a great one, and the one used in all our tests:
 
 ```js
+import { engine } from 'json-modifiable';
 import Ajv from 'ajv';
 
 const ajv = new Ajv();
 const validator = (schema, subject) => ajv.validate(schema, subject);
 
-const modifiable = createJSONModifiable(myDescriptor, rules, { validator });
+const modifiable = engine(myDescriptor, rules, { validator });
 ```
 
 You can see that by supplying a different validator, you don't even have to use JSON schema (though we recommend it) in your modifiable rules.
@@ -223,51 +229,6 @@ type PatchFunction = <T>(descriptor: T, operations: Operation[]) => T;
 ```
 
 **Note:** It's important to know that rules run in the order they have been defined. So your patches will be applied in the order they are evaluated.
-
-## API
-
-```ts
-createJSONModifiable<T, C = unknown, Patch = unknown>(
-  descriptor: T,
-  rules: Rule<Patch>[],
-  options: Options<T,C,Patch>
-): JSONModifiable<T,C>
-
-type Rule<Patch> = {
-  when: Condition[];
-  then?: Patch[];
-  otherwise?: Patch[];
-};
-
-type Condition = {
-  [key: string]: Record<string, unknown>;
-};
-
-
-type Validator = (schema: any, subject: any) => boolean;
-type Resolver = (object: Record<string, unknown>, path: string) => any;
-
-type Options<T, C, Patch> = {
-  // a validator is required
-  validator: Validator;
-  context?: C;
-  pattern?: RegExp | null;
-  resolver?: Resolver;
-  patch?: (record: T, patch: Patch) => T;
-};
-
-type Unsubscribe = () => void;
-type Subscriber<T> = (arg: T) => void;
-
-interface JSONModifiable<T, C, Patch> {
-  get: () => T;
-  setContext: (context: C) => void;
-  subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
-  on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
-  on: (event: 'error', subscriber: Subscriber<ErrorEvent>) => Unsubscribe;
-}
-
-```
 
 ## Interpolation
 
@@ -331,7 +292,7 @@ Interpolations are very powerful and keep your rules serializable.
 **TLDR** in performance critical environments where you aren't using interpolation, pass `null` for the `pattern` option:
 
 ```js
-const modifiable = createJSONModifiable(
+const modifiable = engine(
   myDescriptor, 
   rules, 
   { 

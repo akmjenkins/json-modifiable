@@ -1,8 +1,8 @@
 type Unsubscribe = () => void;
 type Subscriber<T> = (arg: T) => void;
 
-type Validator = (schema: any, subject: any) => boolean;
-type Resolver<Context> = (object: Context, path: string) => any;
+export type Validator = (schema: any, subject: any) => boolean;
+export type Resolver<Context> = (object: Context, path: string) => any;
 
 type ErrorEvent = {
   type: 'ValidationError' | 'PatchError';
@@ -32,7 +32,6 @@ export type Rule<Operation> = {
 };
 
 export type Options<Descriptor, Operation, Context> = {
-  validator: Validator;
   context?: Context;
   pattern?: RegExp | null;
   resolver?: Resolver<Context>;
@@ -41,6 +40,7 @@ export type Options<Descriptor, Operation, Context> = {
 
 export function engine<Descriptor, Op = Partial<T>, Context>(
   descriptor: Descriptor,
+  validator: Validator,
   rules: Rule<Op>[],
-  options: Options<Descriptor, Op, Context>,
+  options?: Options<Descriptor, Op, Context>,
 ): JSONModifiable<Descriptor, Op, Context>;

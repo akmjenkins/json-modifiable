@@ -1,5 +1,5 @@
 import { JSONPatchOperation } from './patch';
-import { Rule, JSONModifiable, Options } from './index';
+import { Validator, Rule, JSONModifiable, Options } from './engine';
 
 export { JSONPatchOperation } from './patch';
 
@@ -9,6 +9,7 @@ export type JSONPatchRule = Rule<JSONPatchOperation[]>;
 
 export function jsonEngine<Descriptor, Context>(
   descriptor: Descriptor,
+  validator: Validator,
   rules: JSONPatchRule[],
-  options: JSONOptions<Descriptor, JSONPatchOperation, Context>,
+  options?: JSONOptions<Descriptor, JSONPatchOperation, Context>,
 ): JSONModifiable<Descriptor, JSONPatchOperation, Context>;

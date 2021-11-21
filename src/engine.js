@@ -8,6 +8,7 @@ const defaults = { resolver, patch };
 
 export const engine = (
   descriptor,
+  validator,
   rules = [],
   { context = {}, ...opts } = {},
   subscribers = new Map(),
@@ -15,11 +16,11 @@ export const engine = (
 ) => {
   opts = { ...defaults, ...opts };
 
-  if (!opts.validator) throw new Error(`A validator is required`);
+  if (!validator) throw new Error(`A validator is required`);
   if (!opts.patch) throw new Error(`A patch function is required`);
   if (!opts.resolver) throw new Error(`A resolver function is required`);
 
-  rules = createStatefulRules(rules, opts);
+  rules = createStatefulRules(rules, { ...opts, validator });
 
   modified = descriptor;
   const cache = new Map();
@@ -50,7 +51,7 @@ export const engine = (
   };
 
   const run = () => {
-    const rulesToApply = rules(context, opts);
+    const rulesToApply = rules(context);
     const ops = new Set(rulesToApply);
     notify(getCached(ops) || evaluate(rulesToApply), ops);
   };
@@ -71,6 +72,6 @@ export const engine = (
     on,
     subscribe: (subscriber) => on('modified', subscriber),
     get: () => modified,
-    setContext: (ctx) => run((context = ctx)),
+    setContext: (ctx) => ctx === context || run((context = ctx)),
   };
 };
