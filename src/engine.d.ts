@@ -11,13 +11,13 @@ type ErrorEvent = {
 
 export type Context = Record<string, unknown>;
 export type Descriptor = Record<string, unknown>;
-export interface JSONModifiable<Descriptor, Op = Partial<T>, Context> {
+export interface JSONModifiable<Descriptor, Op = Partial<Descriptor>, Context> {
   get: () => Descriptor;
   set: (descriptor: Descriptor) => void;
   setRules: (rules: Rule<Op>[]) => void;
   setContext: (context: Context) => void;
-  subscribe: (subscriber: Subscriber<T>) => Unsubscribe;
-  on: (event: 'modified', subscriber: Subscriber<T>) => Unsubscribe;
+  subscribe: (subscriber: Subscriber<Descriptor>) => Unsubscribe;
+  on: (event: 'modified', subscriber: Subscriber<Descriptor>) => Unsubscribe;
   on: (event: 'error', subscriber: Subscriber<ErrorEvent>) => Unsubscribe;
 }
 
@@ -35,10 +35,10 @@ export type Options<Descriptor, Operation, Context> = {
   context?: Context;
   pattern?: RegExp | null;
   resolver?: Resolver<Context>;
-  patch?: (descriptor: Descriptor, operation: Operation) => T;
+  patch?: (descriptor: Descriptor, operation: Operation) => Descriptor;
 };
 
-export function engine<Descriptor, Op = Partial<T>, Context>(
+export function engine<Descriptor, Op = Partial<Descriptor>, Context>(
   descriptor: Descriptor,
   validator: Validator,
   rules: Rule<Op>[],
