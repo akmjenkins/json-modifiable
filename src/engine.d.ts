@@ -15,10 +15,8 @@ type ErrorEvent = {
   err: Error;
 };
 
-export interface JSONModifiable<Descriptor, Schema, Operation, Context> {
+export interface JSONModifiable<Descriptor, Context> {
   get: () => Descriptor;
-  set: (descriptor: Descriptor) => void;
-  setRules: (rules: Rule<Operation, Schema>[]) => void;
   setContext: (context: Context) => void;
   subscribe: (subscriber: Subscriber<Descriptor>) => Unsubscribe;
   on: (event: 'modified', subscriber: Subscriber<Descriptor>) => Unsubscribe;
@@ -50,4 +48,4 @@ export function engine<
   validator: Validator<Schema>,
   rules: Rule<Operation, Schema>[],
   options?: Options<Descriptor, Operation, Context>,
-): JSONModifiable<Descriptor, Operation, Context>;
+): JSONModifiable<Descriptor, Context>;

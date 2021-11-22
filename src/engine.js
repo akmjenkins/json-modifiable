@@ -2,7 +2,7 @@ import { createStatefulRules } from './rule';
 import { compareSets } from './utils';
 
 const resolver = (context, key) => context[key];
-const patch = Object.assign;
+const patch = (...args) => Object.assign({}, ...args);
 
 export const engine = (
   descriptor,
@@ -21,25 +21,20 @@ export const engine = (
   rules = createStatefulRules(rules, { ...opts, validator });
 
   modified = descriptor;
-  const cache = new Map();
-  const emit = (eventType, thing) => {
-    const set = subscribers.get(eventType);
-    set && set.forEach((s) => s(thing));
-  };
+  const emit = (eventType, thing) =>
+    subscribers.get(eventType)?.forEach((s) => s(thing));
 
   const evaluate = (ops) =>
-    ops.reduce(
-      (acc, op) => {
-        try {
-          return opts.patch(acc, op);
-        } catch (err) {
-          emit('error', { type: 'PatchError', err });
-          return acc;
-        }
-      },
-      { ...descriptor },
-    );
+    ops.reduce((acc, op) => {
+      try {
+        return opts.patch(acc, op);
+      } catch (err) {
+        emit('error', { type: 'PatchError', err });
+        return acc;
+      }
+    }, descriptor);
 
+  const cache = new Map();
   const getCached = (ops) => {
     for (const [key, value] of cache) if (compareSets(key, ops)) return value;
   };
