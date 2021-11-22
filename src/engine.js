@@ -52,12 +52,10 @@ export const engine = (
   run();
 
   const on = (eventType, subscriber) => {
-    let m = subscribers.get(eventType);
-    m
-      ? m.add(subscriber)
-      : subscribers.set(eventType, (m = new Set([subscriber])));
-
-    return () => subscribers.get(eventType).delete(subscriber);
+    const set = subscribers.get(eventType) || new Set();
+    subscribers.set(eventType, set);
+    set.add(subscriber);
+    return () => set.delete(subscriber);
   };
 
   return {
