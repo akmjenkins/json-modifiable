@@ -5,11 +5,14 @@ export { JSONPatchOperation } from './patch';
 
 type JSONOptions = Omit<Options, 'resolver' | 'patch'>;
 
-export type JSONPatchRule = Rule<JSONPatchOperation[]>;
+export type JSONPatchRule<Schema = unknown> = Rule<
+  JSONPatchOperation[],
+  Schema
+>;
 
-export function jsonEngine<Descriptor, Context>(
+export function jsonEngine<Descriptor, Schema = unknown, Context = unknown>(
   descriptor: Descriptor,
-  validator: Validator,
+  validator: Validator<Schema>,
   rules: JSONPatchRule[],
   options?: JSONOptions<Descriptor, JSONPatchOperation, Context>,
-): JSONModifiable<Descriptor, JSONPatchOperation, Context>;
+): JSONModifiable<Descriptor, Schema, JSONPatchOperation, Context>;

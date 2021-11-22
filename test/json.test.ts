@@ -1,3 +1,4 @@
+import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
 import { jsonEngine, JSONPatchRule } from '../src';
 import { Descriptor, validator } from './fixtures';
 
@@ -14,7 +15,7 @@ describe('json pointer/patch', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: JSONPatchRule[] = [
+    const rules: JSONPatchRule<SomeJSONSchema>[] = [
       {
         when: [
           {

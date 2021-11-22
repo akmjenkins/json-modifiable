@@ -2,7 +2,7 @@ import { createStatefulRules } from './rule';
 import { compareSets } from './utils';
 
 const resolver = (context, key) => context[key];
-const patch = (...args) => Object.assign({}, ...args);
+const patch = Object.assign;
 
 export const engine = (
   descriptor,
@@ -28,14 +28,17 @@ export const engine = (
   };
 
   const evaluate = (ops) =>
-    ops.reduce((acc, ops) => {
-      try {
-        return opts.patch(acc, ops);
-      } catch (err) {
-        emit('error', { type: 'PatchError', err });
-        return acc;
-      }
-    }, descriptor);
+    ops.reduce(
+      (acc, op) => {
+        try {
+          return opts.patch(acc, op);
+        } catch (err) {
+          emit('error', { type: 'PatchError', err });
+          return acc;
+        }
+      },
+      { ...descriptor },
+    );
 
   const getCached = (ops) => {
     for (const [key, value] of cache) if (compareSets(key, ops)) return value;

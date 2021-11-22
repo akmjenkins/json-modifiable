@@ -1,3 +1,4 @@
+import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { get } from 'jsonpointer';
 import expr from 'property-expr';
@@ -19,7 +20,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule<Partial<Descriptor>>[] = [
+    const rules: Rule<Partial<Descriptor>, SomeJSONSchema>[] = [
       {
         when: [{ contextPath: { type: 'string', const: '1' } }],
         then: { someNewKey: 'fred' },
@@ -58,7 +59,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule<Partial<Descriptor>>[] = [
+    const rules: Rule<Partial<Descriptor>, SomeJSONSchema>[] = [
       {
         when: [{ contextPath: { type: 'string', const: '1' } }],
         then: { someNewKey: 'fred' },
@@ -96,7 +97,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule<Operation[]>[] = [
+    const rules: Rule<Operation[], SomeJSONSchema>[] = [
       {
         when: [
           {
@@ -213,7 +214,7 @@ describe('modifiable', () => {
       validations: ['required', ['minLength', 2]],
     };
 
-    const rules: Rule<Operation[]>[] = [
+    const rules: Rule<Operation[], SomeJSONSchema>[] = [
       {
         when: [
           {

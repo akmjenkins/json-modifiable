@@ -5,11 +5,21 @@
 ![Build Status](https://github.com/akmjenkins/json-modifiable/actions/workflows/test.yaml/badge.svg)
 [![Bundle Phobia](https://badgen.net/bundlephobia/minzip/json-modifiable)](https://bundlephobia.com/result?p=json-modifiable)
 
-An incredibly tiny and configurable rules engine for applying arbitrary modifications to a descriptor based on context. Designed to work best with JSON standards ([json pointer](https://datatracker.ietf.org/doc/html/rfc6901), [json patch](http://jsonpatch.com/), and [json schema](https://json-schema.org/)) but can work with
+## What is this?
 
-1. [JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) like-syntax - like [property-expr](https://www.npmjs.com/package/property-expr) or [lodash's get](https://lodash.com/docs/4.17.15#get)
-2. Schema validators like [joi](https://www.npmjs.com/package/joi) or [yup](https://www.npmjs.com/package/yup).
-3. A custom patch function that accepts a document and the instructions provided in your rules, so you can roll your own patch logic.
+An incredibly tiny and configurable rules engine for applying arbitrary modifications to an entity ([descriptor](#descriptor)) based on context. It's **highly configurable**, although we prefer (do not require) the [rules](#rules) to use .
+
+## Why?
+
+Serializable logic that can be easily stored in a database and shared amongst multiple components of your application.
+
+## Features
+
+- Highly configurable - define your own JSON structures. This doc encourages your rules to be written using [json schema](https://json-schema.org/) but the [validator](#validator) allows you to write them however you choose.
+- Configurable interpolation to make highly reusable rules
+- Extremely lightweight (under 2kb minzipped)
+- Runs everywhere - Deno/Node/browsers
+
 
 ## Installation
 
@@ -31,6 +41,8 @@ Or directly via the browser:
 </script>
 ```
 
+## Concepts
+
 - [Descriptor](#descriptor)
 - [Context](#context)
 - [Validator](#validator)
@@ -39,8 +51,9 @@ Or directly via the browser:
   - [Operation](#operation)
 - [Resolver](#resolver)  
 - [Patch](#patch)
+- [Interpolation](#interpolation)
 
-## Descriptor
+### Descriptor
 
 ```ts
 type Descriptor = Record<string,unknown>
@@ -61,13 +74,13 @@ A descriptor is a plain-old JavaScript object (POJO) that should be "modified" -
 }
 ```
 
-## Context
+### Context
 
 ```ts
 type Context = Record<string,unknown>
 ```
 
-Context is also an object. The context is used by the [validator](#validator) to evaluate the [conditions](#condition) of [rules](#rules)
+Context is also a plain object. The context is used by the [validator](#validator) to evaluate the [conditions](#condition) of [rules](#rules)
 
 ```js
 {
@@ -78,7 +91,7 @@ Context is also an object. The context is used by the [validator](#validator) to
 }
 ```
 
-## Validator
+### Validator
 
 ```ts
 type Validator = (schema: any, subject: any) => boolean;
@@ -93,9 +106,9 @@ import { engine } from 'json-modifiable';
 import Ajv from 'ajv';
 
 const ajv = new Ajv();
-const validator = (schema, subject) => ajv.validate(schema, subject);
+const validator = ajv.validate.bind(ajv);
 
-const modifiable = engine(myDescriptor, rules, { validator });
+const modifiable = engine(myDescriptor, validator, rules);
 ```
 
 You can see that by supplying a different validator, you don't even have to use JSON schema (though we recommend it) in your modifiable rules.
@@ -112,11 +125,15 @@ export type Rule<Operation> = {
 
 A rule is an object whose `when` property is an array of [conditions](#condition) and contains a `then` and/or `otherwise` clause. The [validator](#validator) will evaluate the conditions and, if any of them are true, will apply the `then` operation (if supplied) via the [patch function](#patch). If none of them are true, the `otherwise` operation (if supplied) will be applied.
 
-### Condition
+#### Condition
+
+```ts
+type Condition<Schema> = Record<string, Schema>;
+```
 
 A condition is a plain object whose keys are resolved to values (by means of the [resolver](#resolver) function) and whose values are passed to the [validator](#validator) function with the resolved values.
 
-Using the default resolver, this means that the following:
+The default resolver maps the keys of conditions to the values of context directly:
 
 ```js
 // context
@@ -139,11 +156,41 @@ is given to the validator like this:
 validator({ type: 'string', pattern: '^j'}, 'joe');
 ```
 
-### Operation
+#### Operation
 
-After the engine has run, the modified descriptor is computed by reducing all collected operations via the [patch](#patch) function in the order they were supplied in rules. They can be absolutely anything that the patch function can understand.
+An operation is simply the value encoded in the `then` or `otherwise` of a [rule](#rule). After the engine has run, the modified descriptor is computed by reducing all collected operations via the [patch](#patch) function in the order they were supplied in rules. They can be absolutely anything that the patch function can understand. The default patch function (literally `Object.assign`) expects the operation to be `Partial<Descriptor>` like this:
 
-## Resolver
+```js
+const descriptor = {
+  fieldName: 'lastName',
+  label: 'Last Name',
+}
+
+const rule = {
+  when: {
+    firstName: {
+      type: 'string',
+      minLength: 1
+    }
+  },
+  then: {
+    validations: ['required']
+  }
+}
+
+// resultant descriptor when firstName is not empty
+{
+  fieldName: 'lastName',
+  label: 'Last Name',
+  validations: ['required']
+}
+```
+
+### Resolver
+
+```ts
+export type Resolver<Context> = (object: Context, path: string) => any;
+```
 
 A resolver resolves the keys of [conditions](#condition) to values. It is passed the key and the context being evaluated. The resultant value can be any value that will subsequently get passed to the [validator](#validator). The default resolver simply maps the key of the condition to the key in context:
 
@@ -201,17 +248,90 @@ import { get } from 'lodash';
 const resolver = get;
 ```
 
-## Patch
+### Patch
 
 The patch function does the work of applying the instructions encoded in the [operations](#operations) to the descriptor to end up with the final "modified" descriptor for any given context. 
 
 **NOTE:** The descriptor itself **should never be mutated**. `json-modifiable` leaves it up to the user to ensure the patch function is non-mutating. The default patch function is a simple shallow-clone `Object.assign`:
 
 ```js
-const patch = (...args) => Object.assign( {}, ...args);
+const patch = Object.assign
 ```
 
-## Usage
+
+### Interpolation
+
+`json-modifiable` uses [interpolatable](https://github.com/akmjenkins/interpolatable) to offer allow interpolation of values into rules/patches. See the [docs](https://github.com/akmjenkins/interpolatable) for how it works. The resolver function passed to `json-modifiable` will be the same one passed to interpolatable. By default it's just an accessor, but you could also use a resolver that works with [json pointer](https://datatracker.ietf.org/doc/html/rfc6901):
+
+Given the rule and the following context:
+
+```js
+const rule = {
+  when: [
+    {
+      type: 'object',
+      properties: '{{/fields/from/context}}',
+      required: '{{/fields/required}}',
+    },
+  ];
+}
+
+const context = {
+  fields: {
+    from: {
+      context: {
+        a: {
+          type: "strng"
+        },
+        b: {
+          type: "number"
+        }
+      }
+    }
+  },
+  required: ["a"]
+}
+```
+
+You'll end up with the following interpolated rule:
+
+```js
+{
+  when: [
+    {
+      type: 'object',
+      properties: {
+        a: {
+          type: "strng"
+        },
+        b: {
+          type: "number"
+        }
+      }
+      required: ["a"]
+    },
+  ];
+}
+```
+
+Interpolations are very powerful and keep your rules serializable.
+
+#### About interpolation performance
+
+**TLDR** in performance critical environments where you aren't using interpolation, pass `null` for the `pattern` option:
+
+```js
+const modifiable = engine(
+  myDescriptor, 
+  rules, 
+  { 
+    validator,
+    pattern: null
+  }
+);
+```
+
+## Basic Usage
 
 `json-modifiable` relies on a [validator](#validator) function that evaluates the [condition](#condition) of [rules](#rules) and applies patches
 
@@ -290,54 +410,23 @@ const rules = [
 
 
 
-### Types
+### API
 
-```ts
-export function engine<Descriptor, Op = Partial<Descriptor>, Context>(
-  descriptor: Descriptor,
-  validator: Validator,
-  rules: Rule<Op>[],
-  options?: Options<Descriptor, Op, Context>,
-): JSONModifiable<Descriptor, Op, Context>;
-
-export interface JSONModifiable<Descriptor, Operation = Partial<Descriptor>, Context> {
-  get: () => Descriptor;
-  set: (descriptor: Descriptor) => void;
-  setRules: (rules: Rule<Operation>[]) => void;
-  setContext: (context: Context) => void;
-  subscribe: (subscriber: Subscriber<Descriptor>) => Unsubscribe;
-  on: (event: 'modified', subscriber: Subscriber<Descriptor>) => Unsubscribe;
-  on: (event: 'error', subscriber: Subscriber<ErrorEvent>) => Unsubscribe;
-}
-
-type Condition = {
-  [key: string]: Record<string, unknown>;
-};
-
-export type Rule<Operation> = {
-  when: Condition[];
-  then?: Operation;
-  otherwise?: Operation;
-};
-
-export type Options<Descriptor, Operation, Context> = {
-  context?: Context;
-  pattern?: RegExp | null;
-  resolver?: Resolver<Context>;
-  patch?: (descriptor: Descriptor, operation: Operation) => Descriptor;
-};
-```
+TO DO
 
 
 ### JSON Engine
 
 This library also exports a function `jsonEngine` which is a thin wrapper over the engine using [json patch](http://jsonpatch.com/) as the patch function and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) as the default resolver. You can then write modifiable rules like this:
 
+```js
+TO DO
+```
 
 
-This library internally has tiny, largely spec compliant implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as default options. It should be noted that the json pointer and json patch implementations can access/modify nested structures that don't currently exist in the descriptor **without throwing errors** (not spec compliant). 
+This library internally has tiny, (largely) spec compliant implementations of [json patch](http://jsonpatch.com/) and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) that it uses as the default options for [json engine](#json-engine).
 
-The patch operations are a bit looser than the spec - `add` and `replace` are treated as synonyms and prescribed errors aren't thrown. Another very important difference with the embedded json-patch utility is that it **only patches the parts of the descriptor that are actually modified** - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely on (or make heavy use of) referential integrity/memoization (like React).
+The very important difference with the embedded json-patch utility is that it **only patches the parts of the descriptor that are actually modified** - i.e. no `cloneDeep`. This allows it to work beautifully with libraries that rely on (or make heavy use of) referential integrity/memoization (like React).
 
 ```js
 const DynamicFormField = ({ context }) => {
@@ -385,118 +474,6 @@ const formRules = [
     ],
   },
 ];
-```
-
-## Rules
-
-```ts
-type Rule<Patch = unknown> = {
-  when: Condition[];
-  then?: Patch;
-  otherwise: Patch;
-};
-```
-
-A rule looks like `when`, `then`, `otherwise` where only one of the `then` or `otherwise` needs to be defined. A when is made up on an array of objects whose keys are pointers to entities in `context` and whose values are schemas that will be passed to the `validator` function.
-
-The `when` is always an array of `Condition`s. `Condition`s are plain objects whose keys are `path`s and values are `schemas`.
-
-```ts
-type Condition = {
-  [key: string]: Record<string, any>;
-};
-
-// e.g. Condition using json-pointer syntax
-const condition = {
-  '/formData/firstName': {
-    type: 'string',
-    minLength: 2,
-  },
-};
-```
-
-If **any** of the `Condition`s in a `Rule` are true, then the operations in the `then` clause are applied. If none of them are true then the patch `otherwise` clause are applied. If a rule is false but no `otherwise` clause is specified, then no patches will be applied. The same goes for if a rule is true but doesn't have a `then` clause.
-
-## Operations
-
-THe `then` and `otherwise` are patch entites. Using json standards, JSON Modifiable allows them to be be specified as a [JSON patch](http://jsonpatch.com/) - an array of patch operations.
-
-```ts
-type PatchFunction = <T>(descriptor: T, operations: Operation[]) => T;
-```
-
-**Note:** It's important to know that rules run in the order they have been defined. So your patches will be applied in the order they are evaluated.
-
-## Interpolation
-
-`json-modifiable` uses [interpolatable](https://github.com/akmjenkins/interpolatable) to offer allow interpolation of values into rules/patches. See the [docs](https://github.com/akmjenkins/interpolatable) for how it works. The resolver function passed to `json-modifiable` will be the same one passed to interpolatable. By default it's just an accessor, but you could also use a resolver that works with [json pointer](https://datatracker.ietf.org/doc/html/rfc6901):
-
-Given the rule and the following context:
-
-```js
-const rule = {
-  when: [
-    {
-      type: 'object',
-      properties: '{{/fields/from/context}}',
-      required: '{{/fields/required}}',
-    },
-  ];
-}
-
-const context = {
-  fields: {
-    from: {
-      context: {
-        a: {
-          type: "strng"
-        },
-        b: {
-          type: "number"
-        }
-      }
-    }
-  },
-  required: ["a"]
-}
-```
-
-You'll end up with the following interpolated rule:
-
-```js
-{
-  when: [
-    {
-      type: 'object',
-      properties: {
-        a: {
-          type: "strng"
-        },
-        b: {
-          type: "number"
-        }
-      }
-      required: ["a"]
-    },
-  ];
-}
-```
-
-Interpolations are very powerful and keep your rules serializable.
-
-### About interpolation performance
-
-**TLDR** in performance critical environments where you aren't using interpolation, pass `null` for the `pattern` option:
-
-```js
-const modifiable = engine(
-  myDescriptor, 
-  rules, 
-  { 
-    validator,
-    pattern: null
-  }
-);
 ```
 
 ## Other Cool Stuff
