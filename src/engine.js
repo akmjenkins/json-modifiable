@@ -19,10 +19,12 @@ export const engine = (
   if (!opts.resolver) throw new Error(`A resolver function is required`);
 
   rules = createStatefulRules(rules, { ...opts, validator });
-
   modified = descriptor;
-  const emit = (eventType, thing) =>
+
+  const emit = (eventType, thing) => {
     subscribers.get(eventType)?.forEach((s) => s(thing));
+    return thing;
+  };
 
   const evaluate = (ops) =>
     ops.reduce((acc, op) => {
@@ -39,17 +41,11 @@ export const engine = (
     for (const [key, value] of cache) if (compareSets(key, ops)) return value;
   };
 
-  const notify = (next, key) => {
-    if (modified === next) return;
-    cache.set(key, next);
-    modified = next;
-    emit('modified', modified);
-  };
-
   const run = () => {
     const rulesToApply = rules(context);
     const ops = new Set(rulesToApply);
-    notify(getCached(ops) || evaluate(rulesToApply), ops);
+    const next = getCached(ops) || evaluate(rulesToApply);
+    modified === next || cache.set(ops, emit('modified', (modified = next)));
   };
 
   // run immediately
