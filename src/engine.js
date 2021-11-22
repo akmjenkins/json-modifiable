@@ -21,9 +21,15 @@ export const engine = (
   rules = createStatefulRules(rules, { ...opts, validator });
   modified = descriptor;
 
-  const emit = (eventType, thing) => {
-    subscribers.get(eventType)?.forEach((s) => s(thing));
-    return thing;
+  const emit = (eventType, thing) => (
+    subscribers.get(eventType)?.forEach((s) => s(thing)), thing
+  );
+
+  const on = (eventType, subscriber) => {
+    const set = subscribers.get(eventType) || new Set();
+    subscribers.set(eventType, set);
+    set.add(subscriber);
+    return () => set.delete(subscriber);
   };
 
   const evaluate = (ops) =>
@@ -41,27 +47,20 @@ export const engine = (
     for (const [key, value] of cache) if (compareSets(key, ops)) return value;
   };
 
-  const run = () => {
-    const rulesToApply = rules(context);
+  const get = () => modified;
+
+  const setContext = (ctx, force) => {
+    if (!force && ctx === context) return;
+    const rulesToApply = rules((context = ctx));
     const ops = new Set(rulesToApply);
     const next = getCached(ops) || evaluate(rulesToApply);
     modified === next || cache.set(ops, emit('modified', (modified = next)));
   };
 
+  const subscribe = (s) => on('modified', s);
+
   // run immediately
-  run();
+  setContext(context, true);
 
-  const on = (eventType, subscriber) => {
-    const set = subscribers.get(eventType) || new Set();
-    subscribers.set(eventType, set);
-    set.add(subscriber);
-    return () => set.delete(subscriber);
-  };
-
-  return {
-    on,
-    subscribe: (subscriber) => on('modified', subscriber),
-    get: () => modified,
-    setContext: (ctx) => ctx === context || run((context = ctx)),
-  };
+  return { on, subscribe, get, setContext };
 };
