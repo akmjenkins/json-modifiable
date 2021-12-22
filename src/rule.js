@@ -30,10 +30,14 @@ const createStatefulMap = (when, options) => {
   };
 };
 
-const createStatefulRule = ({ when, then, otherwise }, options) => {
-  when = when.map((w) => createStatefulMap(w, options));
-  then = interpolatable(then, options);
-  otherwise = interpolatable(otherwise, options);
+const createStatefulRule = (
+  { when, then, otherwise, options: ruleOpts = {} },
+  options,
+) => {
+  const interpolatableOptions = { ...options, ...ruleOpts };
+  when = when.map((w) => createStatefulMap(w, interpolatableOptions));
+  then = interpolatable(then, interpolatableOptions);
+  otherwise = interpolatable(otherwise, interpolatableOptions);
 
   return (context) =>
     (when.some((w) => w(context)) ? then : otherwise)(context);

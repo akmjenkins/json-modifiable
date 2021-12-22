@@ -3012,10 +3012,10 @@ internal-slot@^1.0.3:
     has "^1.0.3"
     side-channel "^1.0.4"
 
-interpolatable@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/interpolatable/-/interpolatable-1.2.1.tgz#0a14e2980cd638dc8ed03ec4f38e2a1b68a20729"
-  integrity sha512-p0lT/KrxbHmk1TczmezvdbBt3AoZokJLogWlBKfzw30LMqDIPXw/r3TzcDGQcT7BbaAcYApWKFMceW3Lx7G6cg==
+interpolatable@^1.3.2:
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/interpolatable/-/interpolatable-1.3.2.tgz#fb3f587a227f2cc3c14e76ec127e6e1d09be8fac"
+  integrity sha512-+87Nei5JqwiKXjq7daQpPdID7CqDYhbA+2zXso7VM9n8JslnOpqLSulUenHBp3J0rUdsP/wgnbh4Q7NUklf5Kg==
 
 is-accessor-descriptor@^0.1.6:
   version "0.1.6"

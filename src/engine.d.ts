@@ -1,3 +1,5 @@
+import { Options as InterpolatableOptions } from 'interpolatable';
+
 type Unsubscribe = () => void;
 type Subscriber<T> = (arg: T) => void;
 
@@ -25,16 +27,17 @@ export interface JSONModifiable<Descriptor, Context> {
 
 export type Condition<Schema> = Record<string, Schema>;
 
-export type Rule<Operation, Schema = unknown> = {
+export type Rule<Operation, Schema = unknown, Context = unknown> = {
   when: Condition<Schema>[];
   then?: Operation;
   otherwise?: Operation;
+  options?: InterpolatableOptions<Context>;
 };
 
 export type Options<Descriptor, Operation, Context> = {
   context?: Context;
-  pattern?: RegExp | null;
-  resolver?: Resolver<Context>;
+  pattern?: InterpolatableOptions<Context>['pattern'];
+  resolver?: InterpolatableOptions<Context>['resolver'];
   patch?: (descriptor: Descriptor, operation: Operation) => Descriptor;
 };
 
@@ -46,6 +49,6 @@ export function engine<
 >(
   descriptor: Descriptor,
   validator: Validator<Schema>,
-  rules: Rule<Operation, Schema>[],
+  rules: Rule<Operation, Schema, Context>[],
   options?: Options<Descriptor, Operation, Context>,
 ): JSONModifiable<Descriptor, Context>;
