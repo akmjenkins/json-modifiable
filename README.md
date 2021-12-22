@@ -7,7 +7,7 @@
 
 ## What is this?
 
-An incredibly tiny and configurable rules engine for applying arbitrary modifications to an entity ([descriptor](#descriptor)) based on context. It's **highly configurable**, although we prefer (do not require) the [rules](#rules) to use .
+An incredibly tiny and configurable rules engine for applying arbitrary modifications to a [descriptor](#descriptor) based on context. It's **highly configurable**, although you might find it easiest to write the [rules](#rules) using JSON standards -[json pointer](https://datatracker.ietf.org/doc/html/rfc6901), [json patch](http://jsonpatch.com/), and [json schema](https://json-schema.org/)
 
 ## Why?
 
@@ -16,9 +16,9 @@ Serializable logic that can be easily stored in a database and shared amongst mu
 ## Features
 
 - Highly configurable - define your own JSON structures. This doc encourages your rules to be written using [json schema](https://json-schema.org/) but the [validator](#validator) allows you to write them however you choose.
-- Configurable interpolation to make highly reusable rules
+- Configurable and highly performant interpolations (using  uses [interpolatable](https://github.com/akmjenkins/interpolatable)) to make highly reusable rules
 - Extremely lightweight (under 2kb minzipped)
-- Runs everywhere - Deno/Node/browsers
+- Runs everywhere JavaScript does - Deno/Node/browsers
 
 
 ## Installation
@@ -111,7 +111,7 @@ const validator = ajv.validate.bind(ajv);
 const modifiable = engine(myDescriptor, validator, rules);
 ```
 
-You can see that by supplying a different validator, you don't even have to use JSON schema (though we recommend it) in your modifiable rules.
+You should be able to see that by supplying a different validator, you can write rules however you want, not just using JSON Schema.
 
 ## Rules
 
@@ -409,18 +409,38 @@ const rules = [
 ```
 
 
-
-### API
-
-TO DO
-
-
 ### JSON Engine
 
 This library also exports a function `jsonEngine` which is a thin wrapper over the engine using [json patch](http://jsonpatch.com/) as the patch function and [json pointer](https://datatracker.ietf.org/doc/html/rfc6901) as the default resolver. You can then write modifiable rules like this:
 
-```js
-TO DO
+```ts
+const myRule: JSONPatchRule<SomeJSONSchema> = {
+  when: [
+    {
+      '/contextPath': {
+        type: 'string',
+        const: '1',
+      },
+    },
+  ],
+  then: [
+    {
+      op: 'remove',
+      path: '/validations/0',
+    },
+    {
+      op: 'replace',
+      path: '/someNewKey',
+      value: { newThing: 'fred' },
+    },
+  ],
+  otherwise: [
+    {
+      op: 'remove',
+      path: '/validations',
+    },
+  ],
+};
 ```
 
 

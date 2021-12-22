@@ -8,7 +8,7 @@ import { Descriptor, validator } from './fixtures';
 const { getter } = expr;
 
 describe('modifiable', () => {
-  it.only('should work with default settings', () => {
+  it('should work with default settings', () => {
     const descriptor: Descriptor = {
       fieldId: 'firstName',
       path: 'user.firstName',
