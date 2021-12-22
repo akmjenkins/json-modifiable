@@ -1,6 +1,6 @@
 {
   "name": "json-modifiable",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "A rules engine that dynamically modifies your objects using JSON standards",
   "main": "build/bundle.min.js",
   "module": "build/index.js",
