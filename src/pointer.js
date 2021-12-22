@@ -4,9 +4,9 @@ const replacer = (m) => (m === '~1' ? '/' : '~');
 const decodePointer = (pointer) =>
   tilde.test(pointer) ? pointer.replace(tilde, replacer) : pointer;
 
-const compile = (pointer) => {
+export const compile = (pointer) => {
   try {
-    return decodePointer(pointer).split('/').slice(1);
+    return pointer.split('/').map(decodePointer).slice(1);
   } catch {
     throw new Error(`Invalid JSON Pointer ${pointer}`);
   }

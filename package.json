@@ -2,10 +2,11 @@
   "name": "json-modifiable",
   "version": "1.2.0",
   "description": "A rules engine that dynamically modifies your objects using JSON standards",
-  "main": "build/index.js",
-  "browser": "build/bundle.min.js",
+  "main": "build/bundle.min.js",
+  "module": "build/index.js",
   "types": "build/index.d.ts",
   "author": "Adam Jenkins",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -40,7 +41,6 @@
     "@rollup/plugin-commonjs": "^21.0.1",
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@types/jest": "^27.0.1",
-    "@types/lodash": "^4.14.172",
     "@types/node": "^16.7.10",
     "@typescript-eslint/eslint-plugin": "^4.30.0",
     "@typescript-eslint/parser": "^4.30.0",
@@ -57,7 +57,11 @@
     "eslint-plugin-prettier": "^4.0.0",
     "fast-json-patch": "^3.1.0",
     "jest": "^27.1.0",
+    "json-pointer": "^0.6.1",
+    "json-ptr": "^3.0.0",
+    "jsonpointer": "^5.0.0",
     "prettier": "^2.3.2",
+    "property-expr": "^2.0.4",
     "rimraf": "^3.0.2",
     "rollup": "^2.56.3",
     "rollup-plugin-bundle-size": "^1.0.3",
@@ -67,6 +71,6 @@
     "typescript": "^4.4.2"
   },
   "dependencies": {
-    "interpolatable": "^1.2.0"
+    "interpolatable": "^1.3.2"
   }
 }
