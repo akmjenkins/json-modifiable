@@ -34,13 +34,21 @@ const createStatefulRule = (
   { when, then, otherwise, options: ruleOpts = {} },
   options,
 ) => {
+  let t, o;
   const interpolatableOptions = { ...options, ...ruleOpts };
   when = when.map((w) => createStatefulMap(w, interpolatableOptions));
-  then = interpolatable(then, interpolatableOptions);
-  otherwise = interpolatable(otherwise, interpolatableOptions);
 
-  return (context) =>
-    (when.some((w) => w(context)) ? then : otherwise)(context);
+  return (context) => {
+    let which;
+    const pass = when.some((w) => w(context));
+
+    if (pass) {
+      which = t || (t = interpolatable(then, interpolatableOptions));
+    } else {
+      which = o || (o = interpolatable(otherwise, interpolatableOptions));
+    }
+    return which(context);
+  };
 };
 
 export const createStatefulRules = (rules, options) => {
